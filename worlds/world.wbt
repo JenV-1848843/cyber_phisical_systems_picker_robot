@@ -7,20 +7,20 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 WorldInfo {
 }
 Viewpoint {
-  orientation -0.3025730473785245 -0.3012988067467441 0.9042502861780366 4.607720655713869
-  position 0.09652573115901775 2.646929045550985 2.2971317329160055
+  orientation 0.3099692532387087 0.32671627799575104 -0.8928468713834644 1.631471108545188
+  position 0.07228927737387456 5.472174172218392 5.457433514205959
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
 }
 RectangleArena {
-  translation 0.12 -0.01 0
+  floorSize 5 5
   wallHeight 0.3
 }
 Robot {
-  translation 0.25376680290929793 0.006458981678863424 0.09397507710263578
-  rotation 0.048054196743871076 0.9855588849422623 -0.16237142139756702 0.0027435084296320313
+  translation 0.018712283202345543 -0.002575745686418859 0.09400846896406023
+  rotation 0.00013844645469020597 0.00019018487359924222 -0.999999972331146 1.2067827019501836
   children [
     DEF BODY_EXTENSION Pose {
     }
@@ -147,8 +147,8 @@ Robot {
       rotationStep 0.001
     }
     DEF BUMPER TouchSensor {
-      translation -0.0006196335157090394 2.416405999661024e-05 0.02947095832088109
-      rotation -0.026941688044474308 0.9458499578546147 0.32348416139238956 3.619514859047983e-05
+      translation -0.0010810937394454875 3.344817885825996e-05 0.029409894405802425
+      rotation -0.03169394728199317 0.9344699276114816 0.35462860586179235 3.182807687351523e-05
       children [
         DEF BUMPER_SHAPE Shape {
           appearance PBRAppearance {
@@ -178,8 +178,8 @@ Robot {
         density -1
         mass 0.25821
       }
-      linearVelocity 0.09853384401728736 -0.00017979896533899643 -2.714132815593263e-06
-      angularVelocity -0.0006516326724387437 0.00011175793359967498 -0.00010021433635573475
+      linearVelocity 0.0008881910304109574 0.00031890168488299067 3.0019147723707097e-07
+      angularVelocity 2.0226442935472976e-07 2.036329211370624e-06 -0.8887609068379311
     }
     DEF DISTANCE_SENSOR_BACK_LEFT DistanceSensor {
       translation -0.183 0.183 0.173
@@ -266,7 +266,7 @@ Robot {
     }
     DEF RIGHT_WHEEL_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position 2015.910800396224
+        position 2458.4334449937032
         axis 0 1 0
         anchor 0 -0.2022 0
         suspensionAxis 0 0 1
@@ -283,7 +283,7 @@ Robot {
       ]
       endPoint DEF RIGHT_WHEEL Solid {
         translation 0 -0.202 0
-        rotation -0.7942572614428591 0.4296242815890318 -0.4296258596900306 4.48404797551707
+        rotation -0.524595498981549 -0.6019953903938373 0.6019976016504309 4.107849328445311
         children [
           DEF BIG_WHEEL Group {
             children [
@@ -381,13 +381,13 @@ Robot {
           density -1
           mass 1.82362
         }
-        linearVelocity 0.09848722925608504 -0.00022371043562011893 0.0001263603579970502
-        angularVelocity -0.00021098766680959305 1.0001070791236712 3.9681045417741374e-05
+        linearVelocity -0.06649161016951277 0.1671201398537957 6.433352188778239e-07
+        angularVelocity -1.8578056004331605 -0.7410659398992662 -0.8970325730172437
       }
     }
     DEF LEFT_WHEEL_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position 2050.5098270615044
+        position 3332.3413513306878
         axis 0 1 0
         anchor 0 0.2022 0
         suspensionAxis 0 0 1
@@ -404,7 +404,7 @@ Robot {
       ]
       endPoint DEF LEFT_WHEEL Solid {
         translation 0 0.202 0
-        rotation 0.3418162438905633 0.6645142629690752 -0.6645167038707257 2.4828636082535205
+        rotation 0.31897147514571195 0.6701693437335318 -0.6701718054074911 2.5240554220959144
         children [
           Pose {
             rotation -1 0 0 3.141593
@@ -507,13 +507,13 @@ Robot {
           density -1
           mass 1.82362
         }
-        linearVelocity 0.0985253427704839 -0.00022350268619436846 -0.00013174983956911493
-        angularVelocity -0.00021097710244262822 1.0001144445383128 3.963720805762633e-05
+        linearVelocity 0.06649465524154044 -0.16712434449295635 -5.8200032146863643e-08
+        angularVelocity 1.857806617369416 0.7410703418157807 -0.8970048775929524
       }
     }
     DEF CASTER_WHEEL_FRONT_RIGHT_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position 6.272986530789733
+        position 23.098136170487976
         axis 0 0 1
         anchor 0.1695 -0.102 -0.0335
         suspensionSpringConstant 250000
@@ -521,17 +521,17 @@ Robot {
       }
       endPoint DEF CASTER_WHEEL_FRONT_RIGHT Solid {
         translation 0.1695 -0.102 -0.0335
-        rotation 0 0 1 6.272986530789718
+        rotation 0 0 -1 2.03460505823037
         children [
           DEF SMALL_WHEEL_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 1446.7979390829908
+              position 7124.714854054786
               axis 0 1 0
               anchor -0.016 0 -0.04
             }
             endPoint DEF SMALL_WHEEL Solid {
               translation -0.016 0 -0.04
-              rotation -0.5409863467030215 0.5946978957840862 0.5947000802344813 2.1498025056921675
+              rotation -0.9579786989131404 -0.20282567663859905 -0.20282642166340553 1.6137165525897919
               children [
                 DEF SMALL_WHEEL_SHAPE Shape {
                   appearance PBRAppearance {
@@ -586,8 +586,8 @@ Robot {
                 density -1
                 mass 0.088558
               }
-              linearVelocity 0.09853211902153806 -0.0009857149422961666 4.4236181538904746e-05
-              angularVelocity 0.044843721210472066 3.9386589768883904 0.048466048097003056
+              linearVelocity -0.1750956808579204 0.014620553906384254 3.8017366409467806e-07
+              angularVelocity -0.5684468944764498 -7.248269606832488 -0.9302052254524926
             }
           }
           DEF CASTER_SUPPORT Shape {
@@ -632,13 +632,13 @@ Robot {
           density -1
           mass 0.051448
         }
-        linearVelocity 0.09851799547396757 -0.00041109333255145395 4.373132953769003e-05
-        angularVelocity -0.0005325377219934238 0.00011168845488106583 0.04242444122730783
+        linearVelocity -0.17406296462926787 0.025998353702157244 3.577950433084903e-07
+        angularVelocity 1.3303474961532589e-06 -9.97106569020753e-07 -0.8762359180252215
       }
     }
     DEF CASTER_WHEEL_FRONT_LEFT_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.010918589849762524
+        position 17.922400024207242
         axis 0 0 1
         anchor 0.1695 0.102 -0.0335
         suspensionSpringConstant 250000
@@ -646,17 +646,17 @@ Robot {
       }
       endPoint DEF CASTER_WHEEL_FRONT_LEFT Solid {
         translation 0.1695 0.102 -0.0335
-        rotation 0 0 -1 0.010918589849782846
+        rotation 0 0 1 5.356029409848069
         children [
           DEF SMALL_WHEEL_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 1483.3845795396983
+              position 8535.907550130372
               axis 0 1 0
               anchor -0.016 0 -0.04
             }
             endPoint DEF SMALL_WHEEL Solid {
               translation -0.016 0 -0.04
-              rotation -0.9280947332974723 0.2632865898342117 0.2632875569391104 1.6453523009175581
+              rotation 0.07087956087544336 0.7053270280860635 0.7053296189026698 3.283114575147053
               children [
                 DEF SMALL_WHEEL_SHAPE Shape {
                   appearance PBRAppearance {
@@ -711,8 +711,8 @@ Robot {
                 density -1
                 mass 0.088558
               }
-              linearVelocity 0.0985541824532825 -0.0010633248992435354 -8.349533841939232e-05
-              angularVelocity 0.04793412078739804 3.938019015426931 0.053597203553230145
+              linearVelocity -0.09506751564239935 -0.14734042111799306 1.0823808703269443e-07
+              angularVelocity 6.103151275640248 -3.6733190179644786 -0.9000175778360912
             }
           }
           DEF CASTER_SUPPORT Shape {
@@ -757,13 +757,13 @@ Robot {
           density -1
           mass 0.051448
         }
-        linearVelocity 0.09853895683939821 -0.00042637755507145454 -8.654959613648512e-05
-        angularVelocity -0.0005200588311145824 0.00011165750021199817 0.04701434451036318
+        linearVelocity -0.10450776344094254 -0.14152850361093214 1.9280526996139386e-08
+        angularVelocity 3.762679772525785e-06 -7.290566084653223e-06 -0.8509462410587748
       }
     }
     DEF CASTER_WHEEL_BACK_RIGHT_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -6.300893352993082
+        position -22.930110036648717
         axis 0 0 1
         anchor -0.1735 -0.102 -0.0335
         suspensionSpringConstant 250000
@@ -771,17 +771,17 @@ Robot {
       }
       endPoint DEF CASTER_WHEEL_BACK_RIGHT Solid {
         translation -0.1735 -0.102 -0.0335
-        rotation 0 0 1 6.2654772613660965
+        rotation 0 0 1 2.202631192069629
         children [
           DEF SMALL_WHEEL_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 1382.808723364624
+              position 7220.71413755588
               axis 0 1 0
               anchor -0.016 0 -0.04
             }
             endPoint DEF SMALL_WHEEL_JOINT Solid {
               translation -0.016 0 -0.04
-              rotation -0.9387429964151984 0.24368129846764275 0.24368219356066662 1.6339714714547044
+              rotation 0.6680787044651395 -0.5261505539736824 -0.5261524866361157 4.319548322573488
               children [
                 DEF SMALL_WHEEL_SHAPE Shape {
                   appearance PBRAppearance {
@@ -836,8 +836,8 @@ Robot {
                 density -1
                 mass 0.088558
               }
-              linearVelocity 0.09854583115574114 -0.001811058247482078 8.168831942480146e-05
-              angularVelocity 0.07681766527290035 3.920175523260509 0.10655314042981422
+              linearVelocity 0.09847524390332062 0.14881276751656836 4.788457851883855e-07
+              angularVelocity -6.161436055993011 3.8069731139557113 -0.8993443797599381
             }
           }
           DEF CASTER_SUPPORT Shape {
@@ -882,13 +882,13 @@ Robot {
           density -1
           mass 0.051448
         }
-        linearVelocity 0.09852300291259915 -0.0005373317680900381 8.201182521407966e-05
-        angularVelocity -0.00038987231019657566 0.00010997460218701214 0.09495924459170738
+        linearVelocity 0.10785611636196699 0.14287704763108988 5.757917319199023e-07
+        angularVelocity 3.431353836278144e-06 -7.197292803774955e-06 -0.8525160342228396
       }
     }
     DEF CASTER_WHEEL_BACK_LEFT_JOINT HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.02942717722731893
+        position -17.73400792231565
         axis 0 0 1
         anchor -0.1735 0.102 -0.0335
         suspensionSpringConstant 250000
@@ -896,17 +896,17 @@ Robot {
       }
       endPoint DEF CASTER_WHEEL_BACK_LEFT Solid {
         translation -0.1735 0.102 -0.0335
-        rotation 0 0 -1 0.029427177227325383
+        rotation 0 0 -1 5.167637307956479
         children [
           DEF SMALL_WHEEL_JOINT HingeJoint {
             jointParameters HingeJointParameters {
-              position 1417.5353745808177
+              position 8495.262793435248
               axis 0 1 0
               anchor -0.016 0 -0.04
             }
             endPoint DEF SMALL_WHEEL Solid {
               translation -0.016 0 -0.04
-              rotation -0.24159696198965291 -0.6861586730319508 -0.6861611934381036 2.6674854919512017
+              rotation -0.9619782680614488 0.1931288918888587 0.19312960129218185 1.6095537121618415
               children [
                 DEF SMALL_WHEEL_SHAPE Shape {
                   appearance PBRAppearance {
@@ -961,8 +961,8 @@ Robot {
                 density -1
                 mass 0.088558
               }
-              linearVelocity 0.09855980804463715 -0.0030251949450121663 -4.623329413968317e-05
-              angularVelocity 0.125352666263753 3.8975720052637253 0.1861676856335801
+              linearVelocity 0.1783231284540657 -0.013179192239260796 2.6709946909226596e-07
+              angularVelocity 0.5130501802515527 7.379846908755217 -0.9340827072448658
             }
           }
           DEF CASTER_SUPPORT Shape {
@@ -1007,8 +1007,8 @@ Robot {
           density -1
           mass 0.051448
         }
-        linearVelocity 0.0985454468173619 -0.0007662274439229827 -4.8349652832759545e-05
-        angularVelocity -0.000192072744923322 0.00010544328198667652 0.16854954203770295
+        linearVelocity 0.17737699433702003 -0.02465456342813699 2.4653554230464605e-07
+        angularVelocity 1.2707501511949886e-06 5.994153484566142e-07 -0.8828169443378275
       }
     }
   ]
@@ -1052,6 +1052,6 @@ Robot {
   controllerArgs [
     ""
   ]
-  linearVelocity 0.09853246992503958 -0.00018784434436475638 -2.7446172822724335e-06
-  angularVelocity -0.0006516327206667695 0.00011175805053931833 -0.0001002143254947369
+  linearVelocity 0.00013319530850466557 5.085268782556637e-05 2.99401754843056e-07
+  angularVelocity 2.022657641133985e-07 2.0363286295893917e-06 -0.8887609068177879
 }
