@@ -193,6 +193,7 @@ lwm.setVelocity(lv)
 rwm.setVelocity(rv)
 ts = robot.getDevice('base_cover_link')
 ts.enable(TIME_STEP)
+lidar = robot.getDevice('LIDAR')
 
 reverse = False
 
