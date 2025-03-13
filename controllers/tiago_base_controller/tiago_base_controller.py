@@ -4,6 +4,7 @@
 #  from controller import Robot, Motor, DistanceSensor
 from controller import Robot, DistanceSensor, Motor
 import time
+import roslibpy
 
 # import rospy
 # from math import sqrt
