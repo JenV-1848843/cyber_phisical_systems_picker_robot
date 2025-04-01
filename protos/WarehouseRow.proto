@@ -1,0 +1,35 @@
+#VRML_SIM R2024a utf8
+
+PROTO WarehouseRow [
+  field SFVec3f translation 0 0 0
+]
+{
+  Transform {
+    translation IS translation
+    children [
+      Rack {
+        translation -0.9 -0.7 0.05
+      }
+      Rack {
+        translation -0.6 -0.7 0.05
+      }
+      Rack {
+        translation -0.3 -0.7 0.05
+      }
+      Rack {
+        translation -0.6 -0.7 0.05
+        rotation 0 0 1 3.14159265358979323846264338327950288   
+      }
+      Rack {
+        translation -0.3 -0.7 0.05
+        rotation 0 0 1 3.14159265358979323846264338327950288   
+      }
+      Rack {
+        translation 0.0 -0.7 0.05
+        rotation 0 0 1 3.14159265358979323846264338327950288   
+      }
+    ]
+  }
+}
+
+
