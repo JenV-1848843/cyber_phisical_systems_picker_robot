@@ -1,0 +1,339 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/pallet/protos/WoodenPallet.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.40728252800264936 -0.26540571840787686 -0.8738882920718012 4.1695679082686405
+  position 0.9478494263456831 -1.481475427118102 2.0285367502130898
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  translation 0 -0.25 0
+  floorSize 0.9 1
+  floorTileSize 0.2 0.2
+}
+Solid {
+  translation -0.4 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 1"
+}
+Solid {
+  translation -0.1 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 2"
+}
+Solid {
+  translation -0.2 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 3"
+}
+Solid {
+  translation 0.1 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 4"
+}
+Solid {
+  translation 0.2 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 5"
+}
+Solid {
+  translation 0.4 -0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 6"
+}
+Solid {
+  translation -0.4 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 7"
+}
+Solid {
+  translation -0.1 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 8"
+}
+Solid {
+  translation -0.2 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 9"
+}
+Solid {
+  translation 0.1 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 10"
+}
+Solid {
+  translation 0.2 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 11"
+}
+Solid {
+  translation 0.4 0 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 12"
+}
+Solid {
+  translation -0.4 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 13"
+}
+Solid {
+  translation -0.1 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 14"
+}
+Solid {
+  translation -0.2 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 15"
+}
+Solid {
+  translation 0.1 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 16"
+}
+Solid {
+  translation 0.2 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 17"
+}
+Solid {
+  translation 0.4 0.1 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 18"
+}
+Solid {
+  translation -0.4 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 19"
+}
+Solid {
+  translation -0.1 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 20"
+}
+Solid {
+  translation -0.2 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 21"
+}
+Solid {
+  translation 0.1 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 22"
+}
+Solid {
+  translation 0.2 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 23"
+}
+Solid {
+  translation 0.4 0.2 0
+  children [
+    WoodenBox {
+      translation 0 0 0.055
+      size 0.1 0.1 0.07
+    }
+    WoodenPallet {
+      size 0.1 0.1 0.02
+    }
+  ]
+  name "item 24"
+}
+E-puck {
+  translation 0 -0.46 0
+}
