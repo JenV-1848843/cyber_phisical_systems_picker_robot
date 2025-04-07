@@ -1,0 +1,42 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/appearances/protos/DamascusSteel.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.25965996298616817 -0.5833255836922933 -0.7696154669911898 5.2344191623079945
+  position -0.3077436523098024 -0.4976820926527821 0.5484870125223804
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+}
+E-puck {
+  hidden position_0_0 3.095606743138118e-08
+  hidden position_0_1 3.095609499695879e-08
+  hidden rotation_1 0 1 0 2.9802322387695313e-08
+  hidden rotation_2 0 1 0 2.9802322387695313e-08
+  translation 0.2700000000967734 1.7815620259914806e-11 -6.391454876130374e-05
+  rotation 0.9998611877677658 -0.016661488384179243 6.755395941051966e-07 1.1908990718454164e-07
+  controller "epuck_controller"
+}
+Solid {
+  translation 0 0 0.05
+  children [
+    Shape {
+      appearance DamascusSteel {
+        colorOverride 1 0 0
+      }
+      geometry Box {
+        size 0.1 0.1 0.1
+      }
+    }
+  ]
+}
