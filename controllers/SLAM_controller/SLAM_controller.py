@@ -4,7 +4,7 @@
 # CELL_SIZE can be adjusted to change the resolution of the map 
 # If you want to run the simulation use turtlebot3_burger.wbt
 #
-# TODO: - Make a 'observation count" for each cell. Every time a that cell is observed as obstacle, increment the count and every time it is observed as free, decrement the count. If the count is higer than a certain threshold, mark it as obstacle. If the count is lower than a certain threshold, mark it as free (limit counter to 255 (uint8) or use other uint...). => Results in a more accurate map
+# TODO: - Make a 'observation count" for each cell. Every time a that cell is observed as obstacle, increment the count and every time it is observed as free, decrement the count. If the count is higer than a certain threshold, mark it as obstacle. If the count is lower than a certain threshold, mark it as free (best integrate it in update_map() and limit counter to 255 (uint8) or use other uint...). => Results in a more accurate map
 # TODO: - Implement different threads for the different modules (mapping, navigation, odometry) to improve performance?
 # TODO: - Integrate communication with webserver
 # TODO: - Test with a long simulation to check accuracy of only using odometry
