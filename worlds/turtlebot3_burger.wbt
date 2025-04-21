@@ -4,13 +4,14 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/robotis/turtlebot/protos/TurtleBot3Burger.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/factory/containers/protos/WoodenBox.proto"
 
 WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.18973701289956726 0.18875032980319992 0.9635212394831433 1.6131582337126502
-  position -0.14140343240041625 -9.916158940624284 4.112846987423874
+  orientation 0.26341099675312996 -0.47073658438245314 -0.842034271816453 5.11011687627274
+  position -3.837180705961834 -6.7569847520531905 6.120009519397015
   follow "TurtleBot3Burger"
   followType "Pan and Tilt Shot"
 }
@@ -19,13 +20,15 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  hidden rotation_8 0 -1 0 1.570796000077921
-  translation 0 0 -0.000493504
-  rotation 1 0 0 0
+  translation 0 0 0.00144237
+  rotation 0 0 1 0
   controller "SLAM_controller"
 }
 RectangleArena {
   floorSize 7 7
   wallThickness 0.05
   wallHeight 0.6
+}
+WoodenBox {
+  translation 1.41 -1.45 0.3
 }

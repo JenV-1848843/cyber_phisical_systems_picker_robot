@@ -3,6 +3,7 @@ from controller import Robot
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import random
 import heapq
 
 # === Config ===
@@ -40,7 +41,6 @@ prev_left = 0.0
 prev_right = 0.0
 current_target = None
 grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8) # -1 = obstacle, 0 = unknown, 1 = free
-observation_count = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.uint8) # Grid to count observations of obstacles
 
 # Outer walls of the map are set to -1 (obstacle)
 for x in range(MAP_SIZE_X):
@@ -86,6 +86,7 @@ def update_odometry():
     pose[2] += dtheta
     pose[0] += ds * math.cos(pose[2])
     pose[1] += ds * math.sin(pose[2])
+    return dtheta
 
 # Bresenham's line algorithm to find points between two coordinates
 # x0, y0 = coordinates of the robot
@@ -109,62 +110,40 @@ def update_map():
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
     angle_step = fov / res
+
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
 
-    seen_cells = np.zeros_like(observation_count)
-
     for i, distance in enumerate(ranges):
-        if i < 10 or i > len(ranges) - 10: continue  # skip extreme angles -> noisy
+        if i < 10 or i > len(ranges) - 10:
+            continue  # Negeer de buitenste randen van de LIDAR (te veel ruis)
 
-        angle = -fov / 2 + i * angle_step + rtheta
-        
-        # If distance is too far, set it to 3.0 m
-        # Everything in this range is free space
-        if distance == float('inf') or distance > 3.0:
-            distance = 3.0
-            end_x = rx + math.cos(angle) * distance
-            end_y = ry + math.sin(angle) * distance
-            end_mx, end_my = world_to_map(end_x, end_y)
-            line = bresenham(map_x, map_y, end_mx, end_my)
-            for (x, y) in line:
-                if in_bouds(x, y):
-                    grid_map[x][y] = 1  # free
+        angle = rtheta + fov / 2 - i * angle_step # correcte draairichting
+
+        # Cap de afstand (alles boven 3 meter = geen obstakel gedetecteerd)
+        max_range = 3.0
+        if distance == float('inf') or distance > max_range:
+            distance = max_range
+            hit_obstacle = False
         else:
-            # If distance is less than 3.0 m, set it to the distance
-            # Everything in this range is a free space except the last cell, which is an obstacle
-            end_x = rx + math.cos(angle) * distance
-            end_y = ry + math.sin(angle) * distance
-            end_mx, end_my = world_to_map(end_x, end_y)
-            line = bresenham(map_x, map_y, end_mx, end_my)
-            for (x, y) in line[:-1]:
-                if in_bouds(x, y):
-                    grid_map[x][y] = 1  # free
+            hit_obstacle = True
 
-            if in_bouds(end_mx, end_my):
-                seen_cells[end_mx][end_my] = 1
-                observation_count[end_mx][end_my] += 1
-                if observation_count[end_mx][end_my] >= 3:
-                    if grid_map[end_mx][end_my] != -1: # TODO: Fix that this is not needed => Needed to prevent false positives
-                        grid_map[end_mx][end_my] = -1  # obstacle if seen 3 times
+        end_x = rx + math.cos(angle) * distance
+        end_y = ry + math.sin(angle) * distance
+        end_mx, end_my = world_to_map(end_x, end_y)
 
-    # Decrease the observation count for cells that are not seen
-    decay_rate = 1
-    mask = seen_cells == 0
-    observation_count[mask] = np.maximum(observation_count[mask] - decay_rate, 0)
+        # Bresenham tussen robot en lidar-eindpunt
+        line = bresenham(map_x, map_y, end_mx, end_my)
 
-def inflate_obstacles():
-    inflated = np.copy(grid_map)
-    radius = max(1, int(SAFETY_RADIUS / CELL_SIZE))
-    for x in range(MAP_SIZE_X):
-        for y in range(MAP_SIZE_Y):
-            if grid_map[x][y] == -1:
-                for dx in range(-radius, radius + 1):
-                    for dy in range(-radius, radius + 1):
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < MAP_SIZE_X and 0 <= ny < MAP_SIZE_Y and inflated[nx][ny] == 0:
-                            inflated[nx][ny] = -2
-    return inflated
+        for j, (x, y) in enumerate(line):
+            if not in_bouds(x, y):
+                break  # Stop bij buiten de kaart
+
+            if hit_obstacle and j == len(line) - 1:
+                grid_map[x][y] = -1  # Laatste punt = obstakel
+            else:
+                grid_map[x][y] = 1   # Andere punten = vrij
+
 
 def find_frontier():
     f = []
@@ -217,7 +196,7 @@ def drive_to_target(target):
     left_motor.setVelocity(max(min(fwd - turn, MAX_SPEED), -MAX_SPEED))
     right_motor.setVelocity(max(min(fwd + turn, MAX_SPEED), -MAX_SPEED))
 
-def show_map(path=None, frontiers=None):
+def show_map(path=None, frontiers=None, show_lidar=True):
     img = np.zeros((MAP_SIZE_X, MAP_SIZE_Y, 3), dtype=np.uint8)
 
     # Basis kleuren
@@ -232,10 +211,10 @@ def show_map(path=None, frontiers=None):
             if 0 <= fx < MAP_SIZE_X and 0 <= fy < MAP_SIZE_Y:
                 img[fx, fy] = [255, 0, 0]
 
-    # Robotpositie = wit met blauw tintje
+    # Robotpositie = lichtblauw
     rx, ry = world_to_map(pose[0], pose[1])
     if 0 <= rx < MAP_SIZE_X and 0 <= ry < MAP_SIZE_Y:
-        img[rx, ry] = [0, 255, 255]  # lichtblauw robot
+        img[rx, ry] = [0, 255, 255]
 
     # Pad = paars
     if path:
@@ -244,8 +223,35 @@ def show_map(path=None, frontiers=None):
                 img[px, py] = [128, 0, 128]
 
     plt.clf()
-    plt.imshow(img.transpose((1, 0, 2)), origin='lower', extent=[0, MAP_WIDTH, 0, MAP_HEIGHT])
+    plt.imshow(img.transpose((1, 0, 2)), origin='lower',
+            extent=[-MAP_WIDTH/2, MAP_WIDTH/2, -MAP_HEIGHT/2, MAP_HEIGHT/2])    
     plt.title("SLAM Map")
+
+    # ==== LIDAR visualisatie (optioneel) ====
+    if show_lidar:
+        ranges = lidar.getRangeImage()
+        fov = lidar.getFov()
+        res = lidar.getHorizontalResolution()
+        angle_step = fov / res
+        rx_w, ry_w, rtheta = pose
+        num_rays = 20
+        indices = sorted(random.sample(range(10, len(ranges) - 10), num_rays))
+        for i in indices:
+            distance = min(ranges[i], 3.0)
+            angle = rtheta - fov / 2 + i * angle_step  # let op oriëntatie!
+            end_x = rx_w + math.cos(angle) * distance
+            end_y = ry_w + math.sin(angle) * distance
+            plt.plot([rx_w, end_x], [ry_w, end_y], color='blue', linewidth=0.5)
+            plt.scatter(end_x, end_y, color='blue', s=5)
+
+    # === Oriëntatiepijl robot ===
+    arrow_length = 0.5
+    x_dir = pose[0] + arrow_length * math.cos(pose[2])
+    y_dir = pose[1] + arrow_length * math.sin(pose[2])
+    plt.arrow(pose[0], pose[1], x_dir - pose[0], y_dir - pose[1],
+              head_width=0.15, head_length=0.15, fc='cyan', ec='cyan')
+
+
     plt.pause(0.01)
 
 
@@ -253,8 +259,11 @@ plt.ion()
 path = []
 while robot.step(TIME_STEP) != -1:
     # === 1. Update map voor odometry (om ruis bij draaien te voorkomen) ===
-    update_map()
-    update_odometry()
+    dtheta = update_odometry()
+    
+    if abs(dtheta) < 0.1:
+        update_map()
+
     pose[2] %= 2 * math.pi  # Zorg dat oriëntatie tussen 0-2π blijft
 
     # === 1.1. Update robotpositie in de map ===
@@ -267,7 +276,6 @@ while robot.step(TIME_STEP) != -1:
     cell = world_to_map(pose[0], pose[1])
 
     # === 3. Obstakelinflatie en frontierdetectie ===
-    inflated = inflate_obstacles()
     frontiers = find_frontier()
 
     # === 4. Geen frontiers en geen pad = idle beweging ===
@@ -281,7 +289,7 @@ while robot.step(TIME_STEP) != -1:
     if frontiers and not path:
         frontiers.sort(key=lambda f: heuristic(cell, f))
         for f in frontiers:
-            trial = astar(cell, f, inflated)
+            trial = astar(cell, f, grid_map)
             if trial:
                 path = trial
                 current_target = map_to_world(*path[0])
