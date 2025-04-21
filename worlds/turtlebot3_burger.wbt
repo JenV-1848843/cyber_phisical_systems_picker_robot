@@ -20,7 +20,7 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  translation 0 0 0.00144237
+  translation -3 0 0.00144237
   rotation 0 0 1 0
   controller "SLAM_controller"
 }
