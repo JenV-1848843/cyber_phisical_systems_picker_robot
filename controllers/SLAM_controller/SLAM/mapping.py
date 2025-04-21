@@ -81,6 +81,11 @@ def update_map(pose, lidar, grid_map, map_width, map_height, cell_size, map_size
     return grid_map
 
 def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius):
+    for x in range(map_size_x):
+        for y in range(map_size_y):
+            if grid_map[x][y] == -2:
+                grid_map[x][y] = 1
+
     radius = max(1, int(safety_radius / cell_size))
     for x in range(map_size_x):
         for y in range(map_size_y):

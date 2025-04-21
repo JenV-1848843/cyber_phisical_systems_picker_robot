@@ -1,4 +1,16 @@
-# SLAM Controller with obstacle confirmation, replanning, and robust visualization (rectangular arena)
+# === SLAM Controller for Webots ===
+#
+# To use this code, make sure MAP_WIDTH, MAP_HEIGHT are the same as the (rectangular) arena dimensions
+# CELL_SIZE can be adjusted to change the resolution of the map 
+# If you want to run the simulation use turtlebot3_burger.wbt
+#
+# TODO: - Make a 'observation count" for each cell. Every time a that cell is observed as obstacle, increment the count and every time it is observed as free, decrement the count. If the count is higer than a certain threshold, mark it as obstacle. If the count is lower than a certain threshold, mark it as free (limit counter to 255 (uint8) or use other uint...). => Results in a more accurate map
+# TODO: - Implement different threads for the different modules (mapping, navigation, odometry) to improve performance?
+# TODO: - Integrate communication with webserver
+# TODO: - Test with a long simulation to check accuracy of only using odometry
+# TODO: - Test in turtleBotWorld.wbt or make a new world to simulate warehouse
+# TODO: - Test with multiple robots
+
 
 from controller import Robot
 import numpy as np
@@ -15,13 +27,14 @@ from SLAM.utils import find_frontier, log_status, show_map
 TIME_STEP = 64
 WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
-CELL_SIZE = 0.25
+CELL_SIZE = 0.20
 MAP_WIDTH = 7.0    # meters
 MAP_HEIGHT = 7.0   # meters
 MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
 MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
 MAX_SPEED = 6.28
 SAFETY_RADIUS = CELL_SIZE  # meters
+
 
 # === Robot initialization ===
 robot = Robot()
@@ -42,7 +55,7 @@ lidar.enable(TIME_STEP)
 lidar.enablePointCloud()
 
 # === Initial state ===
-pose = [0.0, 0.0, 0.0]  # [x, y, theta]
+pose = [0.0, 0.0, 0.0]  # [x, y, theta] MUST BE THE SAME AS COORDINATES ROBOT
 prev_left = 0.0
 prev_right = 0.0
 
