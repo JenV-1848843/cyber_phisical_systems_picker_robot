@@ -10,8 +10,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation 0.26341099675312996 -0.47073658438245314 -0.842034271816453 5.11011687627274
-  position -3.837180705961834 -6.7569847520531905 6.120009519397015
+  orientation 0.37248682726563365 -0.44433582186320025 -0.8147510300225073 4.683899096139691
+  position -2.491597953682761 -10.066941243359569 13.012227273346893
   follow "TurtleBot3Burger"
   followType "Pan and Tilt Shot"
 }
@@ -20,7 +20,7 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  translation -3 0 0.00144237
+  translation 0 0 0.00144237
   rotation 0 0 1 0
   controller "SLAM_controller"
 }
@@ -30,5 +30,22 @@ RectangleArena {
   wallHeight 0.6
 }
 WoodenBox {
-  translation 1.41 -1.45 0.3
+  translation 1.41 -2.03 0.3
+  size 0.6 3 0.6
+}
+WoodenBox {
+  translation 0.78 2.49 0.3
+  name "wooden box(2)"
+  size 0.6 2 0.6
+}
+WoodenBox {
+  translation -1.98 -1.48 0.3
+  rotation 0 0 1 -1.5707953071795862
+  name "wooden box(1)"
+  size 0.6 3 0.6
+}
+WoodenBox {
+  translation -2.45 1.81 0.3
+  name "wooden box(3)"
+  size 2 1 0.6
 }
