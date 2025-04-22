@@ -27,7 +27,7 @@ from SLAM.utils import find_frontier, log_status, show_map
 TIME_STEP = 64
 WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
-CELL_SIZE = 0.20
+CELL_SIZE = 0.25
 MAP_WIDTH = 7.0    # meters
 MAP_HEIGHT = 7.0   # meters
 MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
@@ -89,8 +89,7 @@ while robot.step(TIME_STEP) != -1:
         WHEEL_RADIUS, WHEEL_BASE
     )
     
-    if abs(dtheta) < 0.1:
-        update_map(pose, lidar, grid_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y)
+    update_map(pose, lidar, grid_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y)
 
     pose[2] %= 2 * math.pi  # Normalize orientation to [0, 2π)
 
@@ -168,8 +167,8 @@ while robot.step(TIME_STEP) != -1:
         log_counter = 0
         log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
-    # 8. Visualize map and planning
-    show_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+        # 8. Visualize map and planning
+        show_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
 # End visualization
 plt.ioff()
