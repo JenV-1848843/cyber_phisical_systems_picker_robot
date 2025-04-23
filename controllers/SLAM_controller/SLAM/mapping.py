@@ -55,7 +55,7 @@ def update_map(pose, lidar, grid_map, map_width, map_height, cell_size, map_size
         angle = rtheta + fov / 2 - i * angle_step # correcte draairichting
 
         # Cap de afstand (alles boven 3 meter = geen obstakel gedetecteerd)
-        max_range = 3.0
+        max_range = 1.5
         if distance == float('inf') or distance > max_range:
             distance = max_range
             hit_obstacle = False

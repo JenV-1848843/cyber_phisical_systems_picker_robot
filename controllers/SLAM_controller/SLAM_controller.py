@@ -54,6 +54,13 @@ right_sensor.enable(TIME_STEP)
 lidar.enable(TIME_STEP)
 lidar.enablePointCloud()
 
+gps = robot.getDevice("gps")
+gps.enable(TIME_STEP)
+
+gyro = robot.getDevice("gyro")
+gyro.enable(TIME_STEP)
+
+
 # === Initial state ===
 pose = [0.0, 0.0, 0.0]  # [x, y, theta] MUST BE THE SAME AS COORDINATES ROBOT
 prev_left = 0.0
@@ -83,15 +90,23 @@ REPLAN_INTERVAL = 100
 
 # === Main control loop ===
 while robot.step(TIME_STEP) != -1:
-    # 1. Update odometry and map
-    pose, prev_left, prev_right, dtheta = update_odometry(
-        pose, prev_left, prev_right, left_sensor, right_sensor,
-        WHEEL_RADIUS, WHEEL_BASE
-    )
+    # 1. Update odometry and maps
+    # pose, prev_left, prev_right, dtheta = update_odometry(
+    #     pose, prev_left, prev_right, left_sensor, right_sensor,
+    #     WHEEL_RADIUS, WHEEL_BASE
+    # )
+
+    alpha = 0.0  # sterk gewicht op odometrie
+    position = gps.getValues()
+    pose[0] = alpha * pose[0] + (1 - alpha) * position[0]
+    pose[1] = alpha * pose[1] + (1 - alpha) * position[1]
+
+    angular_velocity = gyro.getValues()
+
+
+    pose[2] += angular_velocity[2] * TIME_STEP / 1000.0
     
     update_map(pose, lidar, grid_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y)
-
-    pose[2] %= 2 * math.pi  # Normalize orientation to [0, 2π)
 
     # 2. Determine current cell position
     cell = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
