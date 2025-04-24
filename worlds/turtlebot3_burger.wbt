@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.3801074458143181 0.4782659684693673 0.7916943810843761 1.5746631290243722
-  position -0.9447233193905891 -3.3918578109308943 4.4616793232635095
+  orientation 0.03686169522081565 0.9901462471847784 -0.1350985736836158 0.5377841642689986
+  position -8.990469856643426 0.9280347617341057 5.617467739070931
   follow "TurtleBot3Burger"
   followType "Pan and Tilt Shot"
 }
@@ -21,12 +21,7 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  hidden translation_9 0 -0.08 0.033
-  hidden rotation_9 0 -1 0 2.038925584473287
-  hidden translation_10 0 0.08 0.033
-  hidden rotation_10 0.16187119100401726 -1.889915770863744e-06 -0.9868118957123335 3.141589939041676
-  hidden translation_11 -0.081 0 0.004
-  translation 0 0 -0.000494379
+  translation -1.5 0 -0.000494379
   rotation 0 0 1 0
   controller "SLAM_controller"
   extensionSlot [
@@ -37,27 +32,47 @@ TurtleBot3Burger {
   ]
 }
 RectangleArena {
-  floorSize 7 7
+  floorSize 5 4
   wallThickness 0.05
   wallHeight 0.6
 }
 WoodenBox {
-  translation 1.41 -2.03 0.3
-  size 0.6 3 0.6
-}
-WoodenBox {
-  translation 0.78 2.49 0.3
-  name "wooden box(2)"
-  size 0.6 2 0.6
-}
-WoodenBox {
-  translation -1.98 -1.48 0.3
-  rotation 0 0 1 -1.5707953071795862
-  name "wooden box(1)"
-  size 0.6 3 0.6
-}
-WoodenBox {
-  translation -2.45 1.81 0.3
+  translation 0.98 1.84 0.3
   name "wooden box(3)"
-  size 2 1 0.6
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 0.99 1.11 0.3
+  name "wooden box(1)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 1 0.12 0.3
+  name "wooden box(4)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 0.99 -0.11 0.3
+  name "wooden box(5)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 1 -0.87 0.3
+  name "wooden box(6)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 1 -1.12 0.3
+  name "wooden box(7)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 1 -1.87 0.3
+  name "wooden box(8)"
+  size 3 0.25 0.6
+}
+WoodenBox {
+  translation 0.99 0.86 0.3
+  name "wooden box(2)"
+  size 3 0.25 0.6
 }

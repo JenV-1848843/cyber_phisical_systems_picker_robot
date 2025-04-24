@@ -8,11 +8,27 @@ def find_frontier(grid_map, max_size_X, map_size_y):
     f = []
     for x in range(1, max_size_X - 1):
         for y in range(1, map_size_y - 1):
-            if grid_map[x][y] != 1: continue
-            for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-                nx, ny = x+dx, y+dy
-                if 0 <= nx < max_size_X and 0 <= ny < map_size_y and grid_map[nx][ny] == 0:
-                    f.append((x, y)); break
+            if grid_map[x][y] != 1:
+                continue
+
+            # Check of er in de buurt een onbekende cel zit
+            has_unknown_neighbor = any(
+                0 <= x+dx < max_size_X and 0 <= y+dy < map_size_y and grid_map[x+dx][y+dy] == 0
+                for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]
+            )
+            if not has_unknown_neighbor:
+                continue
+
+            # Check of er in de buurt obstakels/inflated zijn → dan skippen
+            # too_close_to_obstacle = any(
+            #     0 <= x+dx < max_size_X and 0 <= y+dy < map_size_y and grid_map[x+dx][y+dy] in [-1, -2]
+            #     for dx in [-1, 0, 1] for dy in [-1, 0, 1]
+            #     if not (dx == 0 and dy == 0)
+            # )
+            # if too_close_to_obstacle:
+            #     continue
+
+            f.append((x, y))
     return f
 
 def show_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width, map_height, cell_size):

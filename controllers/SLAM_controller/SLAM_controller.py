@@ -3,13 +3,6 @@
 # To use this code, make sure MAP_WIDTH, MAP_HEIGHT are the same as the (rectangular) arena dimensions
 # CELL_SIZE can be adjusted to change the resolution of the map 
 # If you want to run the simulation use turtlebot3_burger.wbt
-#
-# TODO: - Make a 'observation count" for each cell. Every time a that cell is observed as obstacle, increment the count and every time it is observed as free, decrement the count. If the count is higer than a certain threshold, mark it as obstacle. If the count is lower than a certain threshold, mark it as free (best integrate it in update_map() and limit counter to 255 (uint8) or use other uint...). => Results in a more accurate map
-# TODO: - Implement different threads for the different modules (mapping, navigation, odometry) to improve performance?
-# TODO: - Integrate communication with webserver
-# TODO: - Test with a long simulation to check accuracy of only using odometry
-# TODO: - Test in turtleBotWorld.wbt or make a new world to simulate warehouse
-# TODO: - Test with multiple robots
 
 
 from controller import Robot
@@ -27,13 +20,14 @@ from SLAM.utils import find_frontier, log_status, show_map
 TIME_STEP = 64
 WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
-CELL_SIZE = 0.25
-MAP_WIDTH = 7.0    # meters
-MAP_HEIGHT = 7.0   # meters
+CELL_SIZE = 0.10
+MAP_WIDTH = 5.0    # meters
+MAP_HEIGHT = 4.0   # meters
 MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
 MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
 MAX_SPEED = 6.28
 SAFETY_RADIUS = CELL_SIZE  # meters
+OBSTACLE_THRESHOLD = 100  # meters
 
 
 # === Robot initialization ===
@@ -62,7 +56,7 @@ gyro.enable(TIME_STEP)
 
 
 # === Initial state ===
-pose = [0.0, 0.0, 0.0]  # [x, y, theta] MUST BE THE SAME AS COORDINATES ROBOT
+pose = [-1.5, 0.0, 0.0]  # [x, y, theta] MUST BE THE SAME AS COORDINATES ROBOT
 prev_left = 0.0
 prev_right = 0.0
 
@@ -73,93 +67,79 @@ path = []                # Planned path (list of MAP coordinates)
 # === Map initialization ===
 # Map encoding: -2 = inflated cell, -1 = obstacle, 0 = unknown, 1 = free
 grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
 
-# Set outer walls as obstacles
-grid_map[0, :] = -1
-grid_map[-1, :] = -1
-grid_map[:, 0] = -1
-grid_map[:, -1] = -1
 
 # === Visualization & Logging ===
 plt.ion()
 log_counter = 0
 LOG_INTERVAL = 10
 
-replan_counter = 0
-REPLAN_INTERVAL = 100
+init_map = True
 
 # === Main control loop ===
 while robot.step(TIME_STEP) != -1:
-    # 1. Update odometry and maps
+    # 1. Update odometry and maps -> Needs to fixed by adding lidar to correct position in the world
     # pose, prev_left, prev_right, dtheta = update_odometry(
     #     pose, prev_left, prev_right, left_sensor, right_sensor,
     #     WHEEL_RADIUS, WHEEL_BASE
     # )
 
-    alpha = 0.0  # sterk gewicht op odometrie
+
+    # Temporary (or backup plan) fix for odometry
+    alpha = 0.0 
     position = gps.getValues()
     pose[0] = alpha * pose[0] + (1 - alpha) * position[0]
     pose[1] = alpha * pose[1] + (1 - alpha) * position[1]
 
     angular_velocity = gyro.getValues()
-
-
     pose[2] += angular_velocity[2] * TIME_STEP / 1000.0
     
-    update_map(pose, lidar, grid_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y)
+    # 2. Update the map with lidar data
+    # First three seconds of the simulation are used to initialize the map (360° lidar scan)
+    # After that, the lidar will be reduced to 180° to avoid noise
+    if robot.getTime() > 3:
+        init_map = False
 
-    # 2. Determine current cell position
-    cell = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map)
 
-    # 3. Inflate obstacles and detect frontiers
-    inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
+    # 3. Determine current robot position
+    robot_position = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+
+    # 4. Inflate obstacles and detect frontiers
+    grid_map = inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
+    
+    # 5. Find frontiers to be explored
     frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
 
-    # 4. Idle movement when no path or frontiers
-    if not frontiers and not path:
-        left_motor.setVelocity(1.5)
-        right_motor.setVelocity(1.5)
-        show_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        continue
-
-    # 5. Plan new path to a frontier if none exists
+    # 6. Plan new path to a frontier if none exists
     if frontiers and not path:
-        frontiers.sort(key=lambda f: heuristic(cell, f))
+        frontiers.sort(key=lambda f: heuristic(robot_position, f))
         for f in frontiers:
-            trial = astar(cell, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+            trial = astar(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
             if trial:
                 path = trial
                 end_target = path[-1]
                 current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
                 break
 
-    # 6. Follow the planned path
+    # 7. Follow the planned path
     if path:
-        # Revalidate end target
-        if grid_map[end_target[0]][end_target[1]] < 0:
-            print("Target invalid (obstacle/inflated). Searching for new target...")
-            path = []
-            current_target = None
-            end_target = None
-            continue
 
-        # Replan after certain number of steps
-        replan_counter += 1
-        if replan_counter >= REPLAN_INTERVAL and end_target:
-            print("Replanning path...")
-            cell = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-            new_path = astar(cell, end_target, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
-            
-            if new_path:
-                path = new_path
-                current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-            else:
-                print("Replanning failed — no path found.")
+        # Check if the path is still valid
+        rerouting = False
+        for cell in path:
+            if grid_map[cell[0], cell[1]] < 0:
+                print("End target is an obstacle — stopping.")
                 path = []
                 current_target = None
                 end_target = None
-
-            replan_counter = 0
+                rerouting = True
+                break
+        
+        # If the path is invalid, find a new path
+        if rerouting:
+            continue
 
         # Move towards the current target
         if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.15:
@@ -173,18 +153,16 @@ while robot.step(TIME_STEP) != -1:
             drive_to_target(current_target, pose, left_motor, right_motor, MAX_SPEED)
         else:
             print("No target — stopping.")
+            path = []
             left_motor.setVelocity(0.0)
             right_motor.setVelocity(0.0)
 
-    # 7. Logging
+    # 8. Logging and visualization
     log_counter += 1
     if log_counter >= LOG_INTERVAL:
         log_counter = 0
         log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-
-        # 8. Visualize map and planning
         show_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
-# End visualization
 plt.ioff()
 plt.show()

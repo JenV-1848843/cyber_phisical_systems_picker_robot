@@ -1,4 +1,6 @@
 import math
+import numpy as np
+import queue
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -20,7 +22,7 @@ def map_to_world(mx, my, map_width, map_height, cell_size):
 
 # Check if the coordinates are within the bounds of the map
 def in_bounds(mx, my, map_size_x, map_size_y):
-    return 0 < mx < map_size_x - 1 and 0 < my < map_size_y - 1
+    return 0 <= mx <= map_size_x - 1 and 0 <= my <= map_size_y - 1
 
 # Bresenham's line algorithm to find points between two coordinates
 # x0, y0 = coordinates of the robot
@@ -39,7 +41,19 @@ def bresenham(x0, y0, x1, y1):
     return points
 
 # Update the map based on lidar readings
-def update_map(pose, lidar, grid_map, map_width, map_height, cell_size, map_size_x, map_size_y):
+def update_map(pose, lidar, grid_map, obstacle_map, map_width, map_height, cell_size, map_size_x, map_size_y, obstacle_threshold, init_map):
+    """
+    Update de grid_map met behulp van lidar data en een obstakel-confidence map.
+
+    - pose: [x, y, theta] wereldcoördinaten van de robot
+    - lidar: het lidar object (met .getRangeImage etc.)
+    - grid_map: discrete kaart met -1 = obstakel, 1 = vrij, 0 = onbekend
+    - obstacle_map: uint8 confidence map (0-255) van obstakelwaarschijnlijkheden
+    - obstacle_threshold: grenswaarde waarna een cel als obstakel wordt gezien
+    """
+
+    lidar_noise = 10 if init_map else 80
+
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
@@ -48,14 +62,13 @@ def update_map(pose, lidar, grid_map, map_width, map_height, cell_size, map_size
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry, map_width, map_height, cell_size)
 
+    max_range = 1.5  # LIDAR bereik cap
+
     for i, distance in enumerate(ranges):
-        if i < 10 or i > len(ranges) - 10:
-            continue  # Negeer de buitenste randen van de LIDAR (te veel ruis)
+        if i < lidar_noise or i > len(ranges) - lidar_noise:
+            continue  # Vermijd ruis aan rand van LIDAR
 
-        angle = rtheta + fov / 2 - i * angle_step # correcte draairichting
-
-        # Cap de afstand (alles boven 3 meter = geen obstakel gedetecteerd)
-        max_range = 1.5
+        angle = rtheta + fov / 2 - i * angle_step
         if distance == float('inf') or distance > max_range:
             distance = max_range
             hit_obstacle = False
@@ -66,25 +79,33 @@ def update_map(pose, lidar, grid_map, map_width, map_height, cell_size, map_size
         end_y = ry + math.sin(angle) * distance
         end_mx, end_my = world_to_map(end_x, end_y, map_width, map_height, cell_size)
 
-        # Bresenham tussen robot en lidar-eindpunt
         line = bresenham(map_x, map_y, end_mx, end_my)
 
         for j, (x, y) in enumerate(line):
             if not in_bounds(x, y, map_size_x, map_size_y):
-                break  # Stop bij buiten de kaart
+                break
 
             if hit_obstacle and j == len(line) - 1:
-                grid_map[x][y] = -1  # Laatste punt = obstakel
-            else:
-                grid_map[x][y] = 1   # Andere punten = vrij
+                # Laatste punt = potentieel obstakel → score verhogen
+                val = int(obstacle_map[x][y]) + 3
+                val = min(val, 255)
+                obstacle_map[x][y] = val
 
-    return grid_map
+                if obstacle_map[x][y] >= obstacle_threshold:
+                    grid_map[x][y] = -1  # markeer als obstakel
+            else:
+                # Vrije ruimte → score verlagen
+                val = int(obstacle_map[x][y]) - 1
+                val = max(val, 0)
+                obstacle_map[x][y] = val
+                if obstacle_map[x][y] < obstacle_threshold:
+                    grid_map[x][y] = 1  # markeer als vrij
+
+    return grid_map, obstacle_map
+
 
 def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius):
-    for x in range(map_size_x):
-        for y in range(map_size_y):
-            if grid_map[x][y] == -2:
-                grid_map[x][y] = 1
+    inflated_cells = []
 
     radius = max(1, int(safety_radius / cell_size))
     for x in range(map_size_x):
@@ -99,4 +120,6 @@ def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius
                         continue
                         
                     grid_map[nx][ny] = -2  # Inflated cell
+                    inflated_cells.append((nx, ny))
+
     return grid_map
