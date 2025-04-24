@@ -1,14 +1,12 @@
 import pika
 import time
 
-def on_message(ch, method, properties, body):
-
+def on_task_received(ch, method, properties, body):
     print(f"Received message: {body.decode()}")
-    time.sleep(1)
     ch.basic_ack(delivery_tag=method.delivery_tag)
     print("Message acknowledged")
 
-def main():
+def connect_to_task_queue(callback_function):
     connection = None
     try:
         credentials = pika.PlainCredentials('cyber', 'cyber')
@@ -39,4 +37,4 @@ def main():
             connection.close()
 
 if __name__ == '__main__':
-    main()
+    connect_to_task_queue(on_message)
