@@ -31,23 +31,27 @@ def connect_to_rabbitmq():
     return None
 
 def publish_message(queue, message):
-    connection = connect_to_rabbitmq()
-    if connection is None:
-        return False
-
+    connection = None
     try:
+        credentials = pika.PlainCredentials('cyber', 'cyber')
+        parameters = pika.ConnectionParameters(host='localhost',
+                                               port=5672,
+                                               credentials=credentials)
+        connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        channel.queue_declare(queue=queue, durable=True)  # Ensure queue exists
+        channel.queue_declare(queue=queue, durable=True)
         channel.basic_publish(
             exchange='',
             routing_key=queue,
             properties=pika.BasicProperties(
-                delivery_mode=2,  # Make message persistent (QoS 2)
+                delivery_mode=2, # (QoS 2)
             ),
             body=message.encode('utf-8')
         )
+
         print(f" [x] Sent {message} to {queue}")
         return True  # Indicate success
+
     except pika.exceptions.AMQPConnectionError as e:
         print(f"Error publishing message: {e}")
         return False
