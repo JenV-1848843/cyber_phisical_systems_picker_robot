@@ -1,28 +1,17 @@
+version: '3.8'
+
 services:
   rabbitmq:
-    image: rabbitmq:latest
+    image: rabbitmq:3-management
     container_name: rabbitmq
-    restart: always
     ports:
-      - 5672:5672
-      - 15672:15672
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+      - "1883:1883"   # MQTT
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    configs:
-      - source: rabbitmq-plugins
-        target: /etc/rabbitmq/enabled_plugins
-    volumes:
-      - rabbitmq-lib:/var/lib/rabbitmq/
-      - rabbitmq-log:/var/log/rabbitmq
-
-configs:
-  rabbitmq-plugins:
-    content: "[rabbitmq_management]."  
-
-volumes:
-  rabbitmq-lib:
-    driver: local
-  rabbitmq-log:
-    driver: local
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    command: >
+      bash -c "rabbitmq-plugins enable --offline rabbitmq_mqtt &&
+               rabbitmq-server"
 
