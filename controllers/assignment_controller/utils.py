@@ -52,7 +52,6 @@ def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width,
     plt.arrow(pose[0], pose[1], x_dir - pose[0], y_dir - pose[1],
               head_width=0.15, head_length=0.15, fc='cyan', ec='cyan')
 
-    plt.pause(0.01)
     plt.savefig("../../web/static/map.png", bbox_inches='tight') # Save the figure to a file 
 
 # Function to log status of the robot
@@ -84,7 +83,7 @@ def log_status(pose, path, frontiers, current_target, end_target, map_width, map
     if not frontiers and not path:
         print('Status: No frontiers and No path — Stopping')
     elif not path:
-        print('Status: WAIT op pathplanning...')
+        print('Status: WAIT on pathplanning...')
     elif path:
         print(f'Status: Following path, ({len(path)} steps to go)')
     else:

@@ -11,6 +11,8 @@
 from controller import Robot
 import numpy as np
 import math
+import threading
+import time
 
 # Custom modules
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
@@ -74,6 +76,25 @@ current_target = None    # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
 path = []                # Planned path (list of MAP coordinates)
 init_map = True          # Flag to indicate if the map is being initialized 
+
+def background_logger(interval):
+    global pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
+
+    while True:
+        try:
+            # Sleep for the specified interval
+            time.sleep(interval)
+            log_status(pose, path, frontiers, current_target, end_target,
+                       MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+            plot_map(path, frontiers, pose, grid_map,
+                     MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+            upload_maps(grid_map, obstacle_map)
+        except Exception as e:
+            print(f"Error in background logger: {e}")
+
+# Start achtergrondthread voor logging, visualisatie en upload
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
+logger_thread.start()
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -147,8 +168,8 @@ while robot.step(TIME_STEP) != -1:
             left_motor.setVelocity(0.0)
             right_motor.setVelocity(0.0)
 
-    # 8. Logging and visualization
-    if int(robot.getTime()) % 3 == 0:
-        log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        plot_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        upload_maps(grid_map, obstacle_map)
+    # # 8. Logging and visualization
+    # if int(robot.getTime()) % 3 == 0:
+    #     log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+    #     plot_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+    #     upload_maps(grid_map, obstacle_map)
