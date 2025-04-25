@@ -1,11 +1,32 @@
-import pika, time
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
+import os
+import time
+import pika
+import numpy as np
+
+# ──────────────────────────────────────────────────────────────
+# CONFIG
+# ──────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
 
-# RabbitMQ connection parameters
+# Map settings
+MAP_DIR = "maps"
+GRID_FILE = os.path.join(MAP_DIR, "grid_map.npy")
+OBSTACLE_FILE = os.path.join(MAP_DIR, "obstacle_map.npy")
+CELL_SIZE = 0.10
+MAP_WIDTH = 5.0
+MAP_HEIGHT = 4.0
+MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
+MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
+
+# RabbitMQ settings
 rabbitmq_host = 'localhost'
 rabbitmq_queue = 'task_queue'
+
+# ──────────────────────────────────────────────────────────────
+# CONNECTION TO RABBITMQ
+# ──────────────────────────────────────────────────────────────
 
 def connect_to_rabbitmq():
     max_retries = 3
@@ -29,6 +50,52 @@ def connect_to_rabbitmq():
             return None
 
     return None
+
+# ──────────────────────────────────────────────────────────────
+# INITIALIZE MAP
+# ──────────────────────────────────────────────────────────────
+
+def initialize_empty_maps():
+    os.makedirs(MAP_DIR, exist_ok=True)
+    empty_grid = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+    np.save(GRID_FILE, empty_grid)
+
+    empty_obstacles = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
+    np.save(OBSTACLE_FILE, empty_obstacles)
+
+# ──────────────────────────────────────────────────────────────
+# ROUTES - MAP API
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/map', methods=['GET'])
+def get_grid_map():
+    try:
+        return send_file(GRID_FILE, mimetype='application/octet-stream')
+    except FileNotFoundError:
+        return jsonify({"error": "Grid map not found"}), 404
+
+@app.route('/obstacles', methods=['GET'])
+def get_obstacle_map():
+    try:
+        return send_file(OBSTACLE_FILE, mimetype='application/octet-stream')
+    except FileNotFoundError:
+        return jsonify({"error": "Obstacle map not found"}), 404
+
+@app.route('/map', methods=['POST'])
+def update_maps():
+    grid = request.files.get("grid_map")
+    obstacles = request.files.get("obstacle_map")
+
+    if grid:
+        grid.save(GRID_FILE)
+    if obstacles:
+        obstacles.save(OBSTACLE_FILE)
+
+    return jsonify({"status": "Maps updated"}), 200
+
+# ──────────────────────────────────────────────────────────────
+# ROUTES - WEBAPP + RabbitMQ
+# ──────────────────────────────────────────────────────────────
 
 def publish_message(queue, message):
     connection = None
@@ -80,5 +147,10 @@ def index():
             return render_template('index.html', message="Please enter a message.")
     return render_template('index.html', message="")
 
+# ──────────────────────────────────────────────────────────────
+# START
+# ──────────────────────────────────────────────────────────────
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    initialize_empty_maps()
+    app.run(host="0.0.0.0", port=5000, debug=True)

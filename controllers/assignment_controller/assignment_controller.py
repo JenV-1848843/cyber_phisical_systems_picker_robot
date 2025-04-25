@@ -4,19 +4,26 @@
 # CELL_SIZE can be adjusted to change the resolution of the map 
 # If you want to run the simulation use turtlebot3_burger.wbt
 
+# ──────────────────────────────────────────────────────────────
+# IMPORTS
+# ──────────────────────────────────────────────────────────────
 
 from controller import Robot
 import numpy as np
 import math
-import matplotlib.pyplot as plt
 
 # Custom modules
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
 from SLAM.navigation import drive_to_target, heuristic, astar
 from SLAM.odometry import update_odometry
-from SLAM.utils import find_frontier, log_status, show_map
+from frontiers import find_frontier
+from utils import log_status, plot_map
+from communication.map import download_map, upload_maps
 
-# === Configuration ===
+# ──────────────────────────────────────────────────────────────
+# CONFIG
+# ──────────────────────────────────────────────────────────────
+
 TIME_STEP = 64
 WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
@@ -28,9 +35,12 @@ MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
 MAX_SPEED = 6.28
 SAFETY_RADIUS = CELL_SIZE  # meters
 OBSTACLE_THRESHOLD = 100  # meters
+MAP_SERVER = "http://localhost:5000"  # Flask server 
 
 
-# === Robot initialization ===
+# ──────────────────────────────────────────────────────────────
+# ROBOT INITIALIZATION
+# ──────────────────────────────────────────────────────────────
 robot = Robot()
 left_motor = robot.getDevice("left wheel motor")
 right_motor = robot.getDevice("right wheel motor")
@@ -47,53 +57,37 @@ left_sensor.enable(TIME_STEP)
 right_sensor.enable(TIME_STEP)
 lidar.enable(TIME_STEP)
 lidar.enablePointCloud()
-
-gps = robot.getDevice("gps")
-gps.enable(TIME_STEP)
-
 gyro = robot.getDevice("gyro")
 gyro.enable(TIME_STEP)
 
-
-# === Initial state ===
+# Robot position
 pose = [-1.5, 0.0, 0.0]  # [x, y, theta] MUST BE THE SAME AS COORDINATES ROBOT
 prev_left = 0.0
 prev_right = 0.0
 
+# Map initialization from server
+grid_map = download_map("map", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
+obstacle_map = download_map("obstacles", (MAP_SIZE_X, MAP_SIZE_Y), np.int16)
+
+
 current_target = None    # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
 path = []                # Planned path (list of MAP coordinates)
+init_map = True          # Flag to indicate if the map is being initialized 
 
-# === Map initialization ===
-# Map encoding: -2 = inflated cell, -1 = obstacle, 0 = unknown, 1 = free
-grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
-obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
-
-
-# === Visualization & Logging ===
-plt.ion()
-log_counter = 0
-LOG_INTERVAL = 10
-
-init_map = True
-
-# === Main control loop ===
+# ──────────────────────────────────────────────────────────────
+# MAIN LOOP
+# ──────────────────────────────────────────────────────────────
 while robot.step(TIME_STEP) != -1:
-    # 1. Update dtheta via odometry voor particle motion
-    pose, prev_left, prev_right, dtheta = update_odometry(
+    # 1. Update the robot's pose using odometry and gyroscope
+    pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, TIME_STEP,
-        WHEEL_RADIUS, WHEEL_BASE, alpha=0.0  # alpha = 0.0 for gryo, 1.0 for odometry
+        WHEEL_RADIUS, WHEEL_BASE, alpha=0.0  # alpha = 0.0 for gryoscope, 1.0 for odometry
     )
 
-    # Temporary (or backup plan) fix for odometry
-    # alpha = 0.0 
-    # position = gps.getValues()
-    # pose[0] = alpha * pose[0] + (1 - alpha) * position[0]
-    # pose[1] = alpha * pose[1] + (1 - alpha) * position[1]
-    
     # 2. Update the map with lidar data
     # First three seconds of the simulation are used to initialize the map (360° lidar scan)
-    # After that, the lidar will be reduced to 180° to avoid noise
+    # After that, the lidar will be reduced to 180° (in front of robot) to avoid noise
     if robot.getTime() > 3:
         init_map = False
 
@@ -154,11 +148,7 @@ while robot.step(TIME_STEP) != -1:
             right_motor.setVelocity(0.0)
 
     # 8. Logging and visualization
-    log_counter += 1
-    if log_counter >= LOG_INTERVAL:
-        log_counter = 0
+    if int(robot.getTime()) % 3 == 0:
         log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        show_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-
-plt.ioff()
-plt.show()
+        plot_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+        upload_maps(grid_map, obstacle_map)
