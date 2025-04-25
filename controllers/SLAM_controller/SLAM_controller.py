@@ -79,21 +79,17 @@ init_map = True
 
 # === Main control loop ===
 while robot.step(TIME_STEP) != -1:
-    # 1. Update odometry and maps -> Needs to fixed by adding lidar to correct position in the world
-    # pose, prev_left, prev_right, dtheta = update_odometry(
-    #     pose, prev_left, prev_right, left_sensor, right_sensor,
-    #     WHEEL_RADIUS, WHEEL_BASE
-    # )
-
+    # 1. Update dtheta via odometry voor particle motion
+    pose, prev_left, prev_right, dtheta = update_odometry(
+        pose, prev_left, prev_right, left_sensor, right_sensor, gyro, TIME_STEP,
+        WHEEL_RADIUS, WHEEL_BASE, alpha=0.0  # alpha = 0.0 for gryo, 1.0 for odometry
+    )
 
     # Temporary (or backup plan) fix for odometry
-    alpha = 0.0 
-    position = gps.getValues()
-    pose[0] = alpha * pose[0] + (1 - alpha) * position[0]
-    pose[1] = alpha * pose[1] + (1 - alpha) * position[1]
-
-    angular_velocity = gyro.getValues()
-    pose[2] += angular_velocity[2] * TIME_STEP / 1000.0
+    # alpha = 0.0 
+    # position = gps.getValues()
+    # pose[0] = alpha * pose[0] + (1 - alpha) * position[0]
+    # pose[1] = alpha * pose[1] + (1 - alpha) * position[1]
     
     # 2. Update the map with lidar data
     # First three seconds of the simulation are used to initialize the map (360° lidar scan)
