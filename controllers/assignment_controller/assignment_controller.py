@@ -3,6 +3,7 @@
 # To use this code, make sure MAP_WIDTH, MAP_HEIGHT are the same as the (rectangular) arena dimensions
 # CELL_SIZE can be adjusted to change the resolution of the map 
 # If you want to run the simulation use turtlebot3_burger.wbt
+# In utils.py comment/uncomment 'plt.pause(0.1)' (line 55) to see the plot in real-time in webots
 
 # ──────────────────────────────────────────────────────────────
 # IMPORTS
@@ -71,12 +72,6 @@ prev_right = 0.0
 grid_map = download_map("map", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 obstacle_map = download_map("obstacles", (MAP_SIZE_X, MAP_SIZE_Y), np.int16)
 
-
-current_target = None    # Target to drive to in WORLD coordinates
-end_target = None        # Final goal in MAP coordinates
-path = []                # Planned path (list of MAP coordinates)
-init_map = True          # Flag to indicate if the map is being initialized 
-
 def background_logger(interval):
     global pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
 
@@ -95,6 +90,12 @@ def background_logger(interval):
 # Start achtergrondthread voor logging, visualisatie en upload
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
 logger_thread.start()
+
+current_target = None    # Target to drive to in WORLD coordinates
+end_target = None        # Final goal in MAP coordinates
+path = []                # Planned path (list of MAP coordinates)
+init_map = True          # Flag to indicate if the map is being initialized 
+exploring = True          # Flag to indicate if the robot is exploring  
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -121,10 +122,11 @@ while robot.step(TIME_STEP) != -1:
     grid_map = inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
     
     # 5. Find frontiers to be explored
-    frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+    if exploring:
+        frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
 
     # 6. Plan new path to a frontier if none exists
-    if frontiers and not path:
+    if len(frontiers) > 8 and not path:
         frontiers.sort(key=lambda f: heuristic(robot_position, f))
         for f in frontiers:
             trial = astar(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
@@ -133,6 +135,11 @@ while robot.step(TIME_STEP) != -1:
                 end_target = path[-1]
                 current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
                 break
+
+    if len(frontiers) < 8:
+        exploring = False
+        frontiers = []
+        # print("Exploration finished, no more frontiers to explore.")
 
     # 7. Follow the planned path
     if path:
