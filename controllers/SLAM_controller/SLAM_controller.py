@@ -77,6 +77,13 @@ LOG_INTERVAL = 10
 
 init_map = True
 
+# === Target position ===
+MANUAL_POSITION = (5, 5)
+DEFAULT_POSITION = (5, 20)
+PICK_INTERVAL = 300
+pick_counter = 0
+frontiers = []
+
 # === Main control loop ===
 while robot.step(TIME_STEP) != -1:
     # 1. Update odometry and maps -> Needs to fixed by adding lidar to correct position in the world
@@ -109,19 +116,25 @@ while robot.step(TIME_STEP) != -1:
     # 4. Inflate obstacles and detect frontiers
     grid_map = inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
     
-    # 5. Find frontiers to be explored
-    frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+    if MANUAL_POSITION is not None and not path:
+        trial = astar(robot_position, MANUAL_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        path = trial
+        end_target = path[-1]
+        current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+    else:
+        # 5. Find frontiers to be explored
+        frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
 
-    # 6. Plan new path to a frontier if none exists
-    if frontiers and not path:
-        frontiers.sort(key=lambda f: heuristic(robot_position, f))
-        for f in frontiers:
-            trial = astar(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
-            if trial:
-                path = trial
-                end_target = path[-1]
-                current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-                break
+        # 6. Plan new path to a frontier if none exists
+        if frontiers and not path:
+            frontiers.sort(key=lambda f: heuristic(robot_position, f))
+            for f in frontiers:
+                trial = astar(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+                if trial:
+                    path = trial
+                    end_target = path[-1]
+                    current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+                    break
 
     # 7. Follow the planned path
     if path:
@@ -151,6 +164,18 @@ while robot.step(TIME_STEP) != -1:
 
         if current_target:
             drive_to_target(current_target, pose, left_motor, right_motor, MAX_SPEED)
+        elif not current_target and MANUAL_POSITION is not None:
+            if pick_counter <= PICK_INTERVAL:
+                left_motor.setVelocity(0.0)
+                right_motor.setVelocity(0.0)
+                pick_counter += 1
+            else:
+                trial = astar(robot_position, DEFAULT_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+                path = trial
+                end_target = path[-1]
+                current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+                MANUAL_POSITION = None
+                pick_counter = 0
         else:
             print("No target — stopping.")
             path = []
