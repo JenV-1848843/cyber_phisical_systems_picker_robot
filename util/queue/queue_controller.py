@@ -1,10 +1,32 @@
+import json
 import pika
 import time
 
 def on_task_received(ch, method, properties, body):
-    print(f"Received message: {body.decode()}")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
-    print("Message acknowledged")
+
+
+    try:
+        message = json.loads(body.decode('utf-8'))
+        x_target = message.get('x_target')
+        y_target = message.get('y_target')
+        description = message.get('description')
+
+        print(f"Received Task:")
+        print(f"  ➔ x_target: {x_target}")
+        print(f"  ➔ y_target: {y_target}")
+        print(f"  ➔ description: {description}")
+
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        print("Message acknowledged\n")
+
+    except json.JSONDecodeError:
+        print("Failed to decode JSON. Rejecting task.")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  # Don't requeue bad messages
+        #TODO: discuss this!
+    except Exception as e:
+        print(f"An error occurred while processing the task: {e}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+
 
 def connect_to_task_queue(callback_function):
     connection = None
@@ -19,7 +41,7 @@ def connect_to_task_queue(callback_function):
         queue_name = 'task_queue'
         channel.queue_declare(queue=queue_name, durable=True)
         channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(queue=queue_name, on_message_callback=on_message, auto_ack=False)
+        channel.basic_consume(queue=queue_name, on_message_callback=callback_function, auto_ack=False)
 
         print(f" [*] Waiting for messages from {queue_name}. To exit press CTRL+C")
         channel.start_consuming()
@@ -37,4 +59,4 @@ def connect_to_task_queue(callback_function):
             connection.close()
 
 if __name__ == '__main__':
-    connect_to_task_queue(on_message)
+    connect_to_task_queue(on_task_received)

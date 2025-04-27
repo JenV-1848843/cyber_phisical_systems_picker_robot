@@ -59,8 +59,14 @@
   <body>
     <h1>Push a message to task queue</h1>
     <form method="post">
-      <label for="message">Enter your message:</label>
-      <textarea id="message" name="message" rows="4" required></textarea>
+      <label for="x_target">X Target (-1000 to 1000):</label>
+        <input type="number" id="x_target" name="x_target" min="-1000" max="1000" required />
+
+        <label for="y_target">Y Target (-1000 to 1000):</label>
+        <input type="number" id="y_target" name="y_target" min="-1000" max="1000" required />
+
+        <label for="description">Description:</label>
+      <textarea id="description" name="description" rows="2" maxlength="128"></textarea>
       <button type="submit">Send Message</button>
     </form>
     <p>{{ message }}</p>
