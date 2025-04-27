@@ -109,21 +109,26 @@ path = []                # Planned path (list of MAP coordinates)
 frontiers = []           # List of frontiers to explore
 exploring = True         # Flag to indicate if the robot is exploring  
 
+# === Target position ===
+MANUAL_POSITION = (5, 5)
+DEFAULT_POSITION = (5, 20)
+PICK_INTERVAL = 300
+pick_counter = 0
+
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
 logger_thread.start()
+
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, TIME_STEP,
-        WHEEL_RADIUS, WHEEL_BASE, alpha=0.0  # alpha = 0.0 for gryoscope, 1.0 for odometry
+        WHEEL_RADIUS, WHEEL_BASE, alpha=0.0
     )
 
     # 2. Update the map with lidar data
-    # First three seconds of the simulation are used to initialize the map (360° lidar scan)
-    # After that, the lidar will be reduced to 180° (in front of robot) to avoid noise
     if robot.getTime() > 3:
         init_map = False
     grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map)
@@ -131,14 +136,21 @@ while robot.step(TIME_STEP) != -1:
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
-    # 4. Inflate obstacles and detect frontiers
+    # 4. Inflate obstacles
     grid_map = inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
-    
+
+    # === HANDLE MANUAL POSITION FIRST ===
+    if MANUAL_POSITION is not None and not path:
+        trial = astar(robot_position, MANUAL_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        if trial:
+            path = trial
+            end_target = path[-1]
+            current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+
     # === EXPLORATION ===
-    if exploring:
+    elif exploring:
         frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
 
-        # If no frontiers are found, stop exploring
         if not frontiers:
             print("Stopping exploration — no frontiers found.")
             exploring = False
@@ -146,9 +158,8 @@ while robot.step(TIME_STEP) != -1:
             end_target = None
             path = []
             frontiers = []
-            continue  # of continue, afhankelijk waar je dit hebt staan
-        
-        # Find shortest path to frontier with parallel processing
+            continue
+
         if not path:
             with concurrent.futures.ProcessPoolExecutor() as executor:
                 tasks = [(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y) for f in frontiers]
@@ -156,14 +167,11 @@ while robot.step(TIME_STEP) != -1:
 
             valid_paths = [(trial, frontier) for trial, frontier in results if trial]
 
-            # If there are valid paths, choose the shortest one
             if valid_paths:
                 best_path, best_frontier = min(valid_paths, key=lambda x: len(x[0]))
                 path = best_path
                 end_target = path[-1]
                 current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-
-            # If no valid paths are found, stop exploring
             else:
                 print("Stopping exploration — no valid paths found.")
                 exploring = False
@@ -172,9 +180,8 @@ while robot.step(TIME_STEP) != -1:
                 path = []
                 frontiers = []
 
-    # 5. Follow the planned path
+    # === FOLLOW PATH ===
     if path:
-        # Check if the path is still valid
         rerouting = False
         for cell in path:
             if grid_map[cell[0], cell[1]] < 0:
@@ -184,12 +191,10 @@ while robot.step(TIME_STEP) != -1:
                 end_target = None
                 rerouting = True
                 break
-        
-        # If the path is invalid, find a new path
+
         if rerouting:
             continue
 
-        # Move towards the current target
         if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.15:
             path.pop(0)
             if path:
@@ -199,15 +204,30 @@ while robot.step(TIME_STEP) != -1:
 
         if current_target:
             drive_to_target(current_target, pose, left_motor, right_motor, MAX_SPEED)
+        elif not current_target and MANUAL_POSITION is not None:
+            # After reaching MANUAL_POSITION, pause, then go to DEFAULT_POSITION
+            if pick_counter <= PICK_INTERVAL:
+                left_motor.setVelocity(0.0)
+                right_motor.setVelocity(0.0)
+                pick_counter += 1
+            else:
+                trial = astar(robot_position, DEFAULT_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+                if trial:
+                    path = trial
+                    end_target = path[-1]
+                    current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+                MANUAL_POSITION = None
+                pick_counter = 0
         else:
             print("No target — stopping.")
             path = []
             left_motor.setVelocity(0.0)
             right_motor.setVelocity(0.0)
 
-    # If there is no path, drive to start location
+    # === If no path (backup): return to start ===
     else:
         end_target = world_to_map(-1.5, 0.0, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
         path = astar(robot_position, end_target, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
-        current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+        if path:
+            current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
