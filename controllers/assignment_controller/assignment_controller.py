@@ -14,6 +14,7 @@ import numpy as np
 import math
 import threading
 import time
+import concurrent.futures
 
 # Custom modules
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
@@ -72,6 +73,10 @@ prev_right = 0.0
 grid_map = download_map("map", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 obstacle_map = download_map("obstacles", (MAP_SIZE_X, MAP_SIZE_Y), np.int16)
 
+# ──────────────────────────────────────────────────────────────
+# FUNCTIONS FOR CONCURRENCY
+# ──────────────────────────────────────────────────────────────
+
 def background_logger(interval):
     global pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
 
@@ -87,19 +92,28 @@ def background_logger(interval):
         except Exception as e:
             print(f"Error in background logger: {e}")
 
-# Start achtergrondthread voor logging, visualisatie en upload
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
-logger_thread.start()
-
-current_target = None    # Target to drive to in WORLD coordinates
-end_target = None        # Final goal in MAP coordinates
-path = []                # Planned path (list of MAP coordinates)
-init_map = True          # Flag to indicate if the map is being initialized 
-exploring = True          # Flag to indicate if the robot is exploring  
+def find_path_to_frontier(args):
+    robot_pos, frontier, grid_map_local, map_size_x, map_size_y = args
+    from SLAM.navigation import astar  # Import within process!
+    return (astar(robot_pos, frontier, grid_map_local, map_size_x, map_size_y), frontier)
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
 # ──────────────────────────────────────────────────────────────
+
+# Initialize variables
+init_map = True          # Flag to indicate if the map is being initialized 
+current_target = None    # Target to drive to in WORLD coordinates
+end_target = None        # Final goal in MAP coordinates
+path = []                # Planned path (list of MAP coordinates)
+frontiers = []           # List of frontiers to explore
+exploring = True         # Flag to indicate if the robot is exploring  
+
+# Start thread for logging and visualization
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
+logger_thread.start()
+
+# Main loop
 while robot.step(TIME_STEP) != -1:
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
@@ -112,7 +126,6 @@ while robot.step(TIME_STEP) != -1:
     # After that, the lidar will be reduced to 180° (in front of robot) to avoid noise
     if robot.getTime() > 3:
         init_map = False
-
     grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map)
 
     # 3. Determine current robot position
@@ -121,29 +134,46 @@ while robot.step(TIME_STEP) != -1:
     # 4. Inflate obstacles and detect frontiers
     grid_map = inflate_obstacles(grid_map, MAP_SIZE_X, MAP_SIZE_Y, CELL_SIZE, SAFETY_RADIUS)
     
-    # 5. Find frontiers to be explored
+    # === EXPLORATION ===
     if exploring:
         frontiers = find_frontier(grid_map, MAP_SIZE_X, MAP_SIZE_Y)
 
-    # 6. Plan new path to a frontier if none exists
-    if len(frontiers) > 8 and not path:
-        frontiers.sort(key=lambda f: heuristic(robot_position, f))
-        for f in frontiers:
-            trial = astar(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
-            if trial:
-                path = trial
+        # If no frontiers are found, stop exploring
+        if not frontiers:
+            print("Stopping exploration — no frontiers found.")
+            exploring = False
+            current_target = None
+            end_target = None
+            path = []
+            frontiers = []
+            continue  # of continue, afhankelijk waar je dit hebt staan
+        
+        # Find shortest path to frontier with parallel processing
+        if not path:
+            with concurrent.futures.ProcessPoolExecutor() as executor:
+                tasks = [(robot_position, f, grid_map, MAP_SIZE_X, MAP_SIZE_Y) for f in frontiers]
+                results = list(executor.map(find_path_to_frontier, tasks))
+
+            valid_paths = [(trial, frontier) for trial, frontier in results if trial]
+
+            # If there are valid paths, choose the shortest one
+            if valid_paths:
+                best_path, best_frontier = min(valid_paths, key=lambda x: len(x[0]))
+                path = best_path
                 end_target = path[-1]
                 current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-                break
 
-    if len(frontiers) < 8:
-        exploring = False
-        frontiers = []
-        # print("Exploration finished, no more frontiers to explore.")
+            # If no valid paths are found, stop exploring
+            else:
+                print("Stopping exploration — no valid paths found.")
+                exploring = False
+                current_target = None
+                end_target = None
+                path = []
+                frontiers = []
 
-    # 7. Follow the planned path
+    # 5. Follow the planned path
     if path:
-
         # Check if the path is still valid
         rerouting = False
         for cell in path:
@@ -175,8 +205,9 @@ while robot.step(TIME_STEP) != -1:
             left_motor.setVelocity(0.0)
             right_motor.setVelocity(0.0)
 
-    # # 8. Logging and visualization
-    # if int(robot.getTime()) % 3 == 0:
-    #     log_status(pose, path, frontiers, current_target, end_target, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-    #     plot_map(path, frontiers, pose, grid_map, MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-    #     upload_maps(grid_map, obstacle_map)
+    # If there is no path, drive to start location
+    else:
+        end_target = world_to_map(-1.5, 0.0, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+        path = astar(robot_position, end_target, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+
