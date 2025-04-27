@@ -42,17 +42,7 @@ def bresenham(x0, y0, x1, y1):
 
 # Update the map based on lidar readings
 def update_map(pose, lidar, grid_map, obstacle_map, map_width, map_height, cell_size, map_size_x, map_size_y, obstacle_threshold, init_map):
-    """
-    Update de grid_map met behulp van lidar data en een obstakel-confidence map.
-
-    - pose: [x, y, theta] wereldcoördinaten van de robot
-    - lidar: het lidar object (met .getRangeImage etc.)
-    - grid_map: discrete kaart met -1 = obstakel, 1 = vrij, 0 = onbekend
-    - obstacle_map: uint8 confidence map (0-255) van obstakelwaarschijnlijkheden
-    - obstacle_threshold: grenswaarde waarna een cel als obstakel wordt gezien
-    """
-
-    lidar_noise = 10 if init_map else 80
+    lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
@@ -61,12 +51,11 @@ def update_map(pose, lidar, grid_map, obstacle_map, map_width, map_height, cell_
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry, map_width, map_height, cell_size)
-
-    max_range = 1.5  # LIDAR bereik cap
+    max_range = 1.5  # LIDAR range cap
 
     for i, distance in enumerate(ranges):
         if i < lidar_noise or i > len(ranges) - lidar_noise:
-            continue  # Vermijd ruis aan rand van LIDAR
+            continue  # Reduce noise in the lidar data
 
         angle = rtheta + fov / 2 - i * angle_step
         if distance == float('inf') or distance > max_range:
@@ -86,24 +75,26 @@ def update_map(pose, lidar, grid_map, obstacle_map, map_width, map_height, cell_
                 break
 
             if hit_obstacle and j == len(line) - 1:
-                # Laatste punt = potentieel obstakel → score verhogen
+                # Last point -> increase score of being an obstacle
                 val = int(obstacle_map[x][y]) + 3
                 val = min(val, 255)
                 obstacle_map[x][y] = val
 
                 if obstacle_map[x][y] >= obstacle_threshold:
-                    grid_map[x][y] = -1  # markeer als obstakel
+                    grid_map[x][y] = -1  # If the score is higher than threshold, mark as obstacle
             else:
-                # Vrije ruimte → score verlagen
+                # Free space -> decrease score of being an obstacle
                 val = int(obstacle_map[x][y]) - 1
                 val = max(val, 0)
                 obstacle_map[x][y] = val
+
                 if obstacle_map[x][y] < obstacle_threshold:
-                    grid_map[x][y] = 1  # markeer als vrij
+                    grid_map[x][y] = 1  # If the score is lower than threshold, mark as free space
 
     return grid_map, obstacle_map
 
 
+# Inflate the obstacles in the grid map to create a safety buffer
 def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius):
     inflated_cells = []
 

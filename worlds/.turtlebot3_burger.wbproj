@@ -5,5 +5,5 @@ sceneTreePerspectives: 000000ff00000001000000030000001d000000c0000000fa010000000
 maximizedDockId: -1
 centralWidgetVisible: 1
 orthographicViewHeight: 1
-textFiles: 0 "controllers/SLAM_controller/SLAM_controller.py"
+textFiles: 0 "controllers/assignment_controller/assignment_controller.py"
 consoles: Console:All:All
