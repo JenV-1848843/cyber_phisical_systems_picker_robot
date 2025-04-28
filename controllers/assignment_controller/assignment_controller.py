@@ -110,7 +110,6 @@ frontiers = []           # List of frontiers to explore
 exploring = True         # Flag to indicate if the robot is exploring  
 
 # === Target position ===
-# MANUAL_POSITION = (45, 36)
 MANUAL_POSITION = None  # Set to None for automatic exploration
 DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
