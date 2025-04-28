@@ -19,7 +19,7 @@ def astar(start, goal, cost_map, map_size_x, map_size_y):
             nx, ny = current[0]+dx, current[1]+dy
             if not (0 <= nx < map_size_x and 0 <= ny < map_size_y): continue
             if cost_map[nx][ny] < 0: continue
-            tentative = g[current] + 1
+            tentative = g[current] + cost_map[nx][ny]
             if tentative < g.get((nx, ny), float('inf')):
                 came_from[(nx, ny)] = current
                 g[(nx, ny)] = tentative
