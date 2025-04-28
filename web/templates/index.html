@@ -3,72 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <title>RabbitMQ Publisher</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        padding: 20px;
-        background-color: #f4f4f4;
-        border-radius: 8px;
-      }
-      h1 {
-        text-align: center;
-        color: #333;
-      }
-      form {
-        margin-top: 20px;
-        padding: 20px;
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        color: #555;
-      }
-      textarea {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        resize: vertical;
-        box-sizing: border-box;
-      }
-      button {
-        background-color: #4caf50;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-      }
-      button:hover {
-        background-color: #45a049;
-      }
-      p {
-        margin-top: 20px;
-        text-align: center;
-        font-size: 16px;
-        color: #333;
-      }
-    </style>
-  </head>
+    <link rel="stylesheet" href="/static/styles.css">  </head>
   <body>
-    <h1>Push a message to task queue</h1>
-    <form method="post">
-      <label for="message">Enter your message:</label>
-      <textarea id="message" name="message" rows="4" required></textarea>
-      <button type="submit">Send Message</button>
-    </form>
-    <p>{{ message }}</p>
+    <h1>Warehouse picker robot: Management page</h1>
 
-    <div class="map-container">
-      <h2>Live SLAM Map</h2>
-      <img id="slamMap" src="/static/map.png" alt="SLAM Map" />
+    <div class="container">
+      <form method="post">
+        <h2>Add task to the queue</h2>
+        <label for="x_target">X coordinate</label>
+        <input type="number" id="x_target" name="x_target" min="-1000" max="1000" required />
+
+        <label for="y_target">Y coordinate</label>
+        <input type="number" id="y_target" name="y_target" min="-1000" max="1000" required />
+
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="2" maxlength="128" required></textarea>
+
+        <button type="submit">Send Message</button>
+      </form>
+
+      <div class="map-container">
+        <h2>Live SLAM Map</h2>
+        <img id="slamMap" src="/static/map.png" alt="SLAM Map" />
+      </div>
     </div>
+
+    <p>{{ message }}</p>
 
     <script>
       setInterval(() => {

@@ -1,15 +1,11 @@
-version: '3.7'
+version: '3.8'
 services:
   rabbitmq:
     image: rabbitmq:3.9-management
     ports:
       - "5672:5672"
       - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq/mnesia
     environment:
       RABBITMQ_DEFAULT_USER: cyber
       RABBITMQ_DEFAULT_PASS: cyber
 
-volumes:
-  rabbitmq_data:

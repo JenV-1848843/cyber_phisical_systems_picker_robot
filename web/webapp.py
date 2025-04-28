@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file
+import json
 import os
 import time
 import pika
@@ -107,13 +108,15 @@ def publish_message(queue, message):
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
         channel.queue_declare(queue=queue, durable=True)
+        message_json = json.dumps(message)
+
         channel.basic_publish(
             exchange='',
             routing_key=queue,
             properties=pika.BasicProperties(
                 delivery_mode=2, # (QoS 2)
             ),
-            body=message.encode('utf-8')
+            body=message_json.encode('utf-8')
         )
 
         print(f" [x] Sent {message} to {queue}")
@@ -130,22 +133,59 @@ def publish_message(queue, message):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    """
-    Handles the main web page.
-    - On GET, it displays the input form.
-    - On POST, it publishes the message to RabbitMQ and shows a confirmation.
-    """
     if request.method == 'POST':
-        message = request.form['message']
-        if message:
-            publish_result = publish_message(rabbitmq_queue, message) # Capture the return value
+        data = request.form
+        validation_errors = validate_input(data)
+        if validation_errors:
+            return render_template('index.html', message="Validation Error: " + "; ".join(validation_errors))
+
+
+        message_dict = {
+            'x_target': int(data['x_target']),
+            'y_target': int(data['y_target']),
+            'description': data['description']
+        }
+
+
+        if message_dict:
+            publish_result = publish_message(rabbitmq_queue, message_dict)
             if publish_result:
-                return render_template('index.html', message=f"Message '{message}' sent to RabbitMQ!")
+                return render_template('index.html', message="Message sent successfully!")
             else:
-                return render_template('index.html', message=f"Failed to send message '{message}' to task qeueu.  Check the RabbitMQ server and try again.")
+                return render_template('index.html', message=f"Failed to send message to task qeueu.  Check the RabbitMQ server and try again.")
         else:
-            return render_template('index.html', message="Please enter a message.")
+            return render_template('index.html', message="Please enter a valid task.")
+
     return render_template('index.html', message="")
+
+
+
+# ──────────────────────────────────────────────────────────────
+# ROUTES helper functions
+# ──────────────────────────────────────────────────────────────
+
+def validate_input(data):
+    errors = []
+    try:
+        x_target = int(data.get('x_target', ''))
+        if not (-1000 <= x_target <= 1000):
+            errors.append("x_target must be between -1000 and 1000.")
+    except ValueError:
+        errors.append("x_target must be an integer.")
+
+    try:
+        y_target = int(data.get('y_target', ''))
+        if not (-1000 <= y_target <= 1000):
+            errors.append("y_target must be between -1000 and 1000.")
+    except ValueError:
+        errors.append("y_target must be an integer.")
+
+    description = data.get('description', '')
+    if not isinstance(description, str) or len(description) > 128:
+        errors.append("description must be a string up to 128 characters.")
+
+    return errors
+
 
 # ──────────────────────────────────────────────────────────────
 # START
