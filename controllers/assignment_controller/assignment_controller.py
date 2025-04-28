@@ -179,7 +179,7 @@ while robot.step(TIME_STEP) != -1:
                 end_target = None
                 path = []
                 frontiers = []
-                MANUAL_POSITION = (45, 36)
+                MANUAL_POSITION = (40, 36)
 
     # === FOLLOW PATH ===
     if path:
