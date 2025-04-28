@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.3363702578108142 0.5369200626781317 0.7736742828568088 1.361313090005811
-  position -2.6051037235208416 -4.91957896265901 6.278023456140289
+  orientation -0.3436394112396688 0.4103395642643077 0.8447090605896398 1.5621673138041712
+  position -0.8372361709288585 -6.529347147430552 6.2786189045911485
   follow "TurtleBot3Burger"
   followType "Pan and Tilt Shot"
 }
@@ -40,40 +40,40 @@ RectangleArena {
 WoodenBox {
   translation 1 1.85 0.3
   name "wooden box(3)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
-  translation 0.99 1.15 0.3
+  translation 1 1.15 0.3
   name "wooden box(1)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
   translation 1 0.15 0.3
   name "wooden box(4)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
-  translation 0.99 -0.15 0.3
+  translation 1 -0.15 0.3
   name "wooden box(5)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
   translation 1 -0.85 0.3
   name "wooden box(6)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
-  translation 1 -1.14 0.3
+  translation 1 -1.15 0.3
   name "wooden box(7)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
-  translation 1 -1.84 0.3
+  translation 1 -1.85 0.3
   name "wooden box(8)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }
 WoodenBox {
-  translation 0.99 0.85 0.3
+  translation 1 0.85 0.3
   name "wooden box(2)"
-  size 3 0.3 0.6
+  size 3 0.29 0.6
 }

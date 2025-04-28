@@ -8,7 +8,7 @@ from SLAM.mapping import world_to_map, map_to_world
 def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width, map_height, cell_size):
     img = np.zeros((max_size_X, map_size_y, 3), dtype=np.uint8)
 
-    img[grid_map == 5] = [255, 165, 0]     # Inflated = orange
+    img[grid_map == 10] = [255, 165, 0]     # Inflated = orange
     img[grid_map == -1] = [0, 0, 0]         # Obstacles = black
     img[grid_map == 0] = [100, 100, 100]    # Unknown = gray
     img[grid_map == 1] = [255, 255, 255]    # Free = white

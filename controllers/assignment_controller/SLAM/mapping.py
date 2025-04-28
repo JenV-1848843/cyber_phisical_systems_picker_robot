@@ -96,8 +96,6 @@ def update_map(pose, lidar, grid_map, obstacle_map, map_width, map_height, cell_
 
 # Inflate the obstacles in the grid map to create a safety buffer
 def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius):
-    inflated_cells = []
-
     radius = max(1, int(safety_radius / cell_size))
     for x in range(map_size_x):
         for y in range(map_size_y):
@@ -110,7 +108,6 @@ def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius
                     if not in_bounds(nx, ny, map_size_x, map_size_y) or grid_map[nx][ny] == -1:
                         continue
                         
-                    grid_map[nx][ny] = 5  # Inflated cell
-                    inflated_cells.append((nx, ny))
+                    grid_map[nx][ny] = 10  # Inflated cell
 
     return grid_map

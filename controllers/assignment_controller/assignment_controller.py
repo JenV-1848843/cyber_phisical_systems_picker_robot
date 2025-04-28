@@ -110,7 +110,7 @@ frontiers = []           # List of frontiers to explore
 exploring = True         # Flag to indicate if the robot is exploring  
 
 # === Target position ===
-MANUAL_POSITION = (5, 5)
+MANUAL_POSITION = None  # Set to None for automatic exploration
 DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
 pick_counter = 0
@@ -179,6 +179,7 @@ while robot.step(TIME_STEP) != -1:
                 end_target = None
                 path = []
                 frontiers = []
+                MANUAL_POSITION = (40, 36)
 
     # === FOLLOW PATH ===
     if path:
