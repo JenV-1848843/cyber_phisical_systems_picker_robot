@@ -110,7 +110,7 @@ def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius
                     if not in_bounds(nx, ny, map_size_x, map_size_y) or grid_map[nx][ny] == -1:
                         continue
                         
-                    grid_map[nx][ny] = -2  # Inflated cell
+                    grid_map[nx][ny] = 5  # Inflated cell
                     inflated_cells.append((nx, ny))
 
     return grid_map

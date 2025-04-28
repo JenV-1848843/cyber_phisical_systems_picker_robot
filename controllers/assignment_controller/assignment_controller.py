@@ -31,7 +31,7 @@ from communication.map import download_map, upload_maps
 TIME_STEP = 64
 WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
-CELL_SIZE = 0.10
+CELL_SIZE = 0.1
 MAP_WIDTH = 5.0    # meters
 MAP_HEIGHT = 4.0   # meters
 MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
