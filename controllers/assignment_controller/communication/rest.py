@@ -10,12 +10,13 @@ def initiate_robot(robot_name):
     response = requests.get(f"{SERVER_URL}/robot/initialize/{robot_name}")
     if response.status_code == 200:
         initialized = True
+        robot_id = response.json()["robot_id"] 
         pose = response.json()["start_pose"]
         home_cell = world_to_map(pose[0], pose[1])
         print(f"Robot initialized: {robot_name} with pose {pose}")
-        return initialized, pose, home_cell
+        return initialized, robot_id, pose, home_cell
     else:
         initialized = False
-        pose = home_cell = None
+        robot_id = pose = home_cell = None
         print(f"Error initializing robot: {response.json()['error']}")
-        return initialized, pose, home_cell
+        return initialized, robot_id, pose, home_cell

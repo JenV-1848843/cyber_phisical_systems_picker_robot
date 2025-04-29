@@ -29,12 +29,6 @@ from communication.rest import initiate_robot
 from communication.sockets import connect_to_server, send_status_update
 
 # ──────────────────────────────────────────────────────────────
-# CONFIG
-# ──────────────────────────────────────────────────────────────
-
-ROBOT_ID = 1
-
-# ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
 # ──────────────────────────────────────────────────────────────
 robot = Robot()
@@ -59,7 +53,7 @@ gyro.enable(TIME_STEP)
 
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, pose, DEFAULT_POSITION = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_ID, pose, DEFAULT_POSITION = initiate_robot(ROBOT_NAME)
 
 # Check if the robot was initialized successfully
 if not initialized:
@@ -89,7 +83,7 @@ def background_logger(interval):
             time.sleep(interval)
             status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
-            plot_map(path, frontiers, pose, grid_map)
+            plot_map(path, frontiers, pose, grid_map, occupancy_map)
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -227,6 +221,6 @@ while robot.step(TIME_STEP) != -1:
     # === If no path (backup): return to start ===
     else:
         end_target = DEFAULT_POSITION
-        path = astar(robot_position, end_target, grid_map)
+        path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
         if path:
             current_target = map_to_world(path[0][0], path[0][1])

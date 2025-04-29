@@ -43,7 +43,7 @@ def bresenham(x0, y0, x1, y1):
 
 # Function to get the cells of the corridor the robot's in
 def get_corridor_cells(pose):
-    rx, ry = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+    rx, ry = world_to_map(pose[0], pose[1])
 
     corridorCells = []
 

@@ -29,8 +29,8 @@ rabbitmq_host = 'localhost'
 rabbitmq_queue = 'task_queue'
 
 # Robot initialization settings
-ROBOT_IDS = {"Bobbie": -10, "Bubbie": -11}
-ROBOT_START_POSES = {"Bobbie": [-1.5, 0.0, 0.0], "Bubbie": [-1.5, 1.0, 0]}  # [x, y, theta]
+ROBOT_IDS = {"Robot1": 1, "Robot2": 2}
+ROBOT_START_POSES = {"Robot1": [-1.5, 0.0, 0.0], "Robot2": [-1.5, 1.0, 0]}  # [x, y, theta]
 robot_index = 0
 lock = threading.Lock()
 
