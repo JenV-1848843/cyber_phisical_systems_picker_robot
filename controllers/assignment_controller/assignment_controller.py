@@ -23,8 +23,9 @@ from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_wor
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from frontiers import find_frontier
-from utils import log_status, plot_map
+from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
+from communication.sockets import connect_to_server, send_status_update
 
 # ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
@@ -50,13 +51,15 @@ gyro.enable(TIME_STEP)
 
 
 # Initialize the robot using the REST API
-robot_name = robot.getName()
-initialized, pose, DEFAULT_POSITION = initiate_robot(robot_name)
+ROBOT_NAME = robot.getName()
+initialized, pose, DEFAULT_POSITION = initiate_robot(ROBOT_NAME)
 
 # Check if the robot was initialized successfully
 if not initialized:
-    print(f"Robot {robot_name} not initialized. Exiting.")
+    print(f"Robot {ROBOT_NAME} not initialized. Exiting.")
     exit(1)
+
+connect_to_server()
 
 prev_left = 0.0
 prev_right = 0.0
@@ -70,13 +73,14 @@ obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
 # ──────────────────────────────────────────────────────────────
 
 def background_logger(interval):
-    global pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
+    global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
 
     while True:
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            log_status(pose, path, frontiers, current_target, end_target)
+            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
+            send_status_update(status_update)
             plot_map(path, frontiers, pose, grid_map)
 
         except Exception as e:

@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
 import threading
 import json
 import os
@@ -11,6 +12,7 @@ import numpy as np
 # ──────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Map settings
 MAP_DIR = "maps"
@@ -46,6 +48,16 @@ def initialize_robot(name):
             }), 200
         else:
             return jsonify({"error": f"Robot not found with name '{name}'"}), 404
+
+# ──────────────────────────────────────────────────────────────
+# SOCKETIO FOR ROBOT UPDATES
+# ──────────────────────────────────────────────────────────────
+
+@socketio.on('status_update')
+def handle_status_update(data):
+    with lock:
+        robot_id = data.get('robot_id')
+        print(f"Received status update from robot {robot_id}: {data}")
 
 # ──────────────────────────────────────────────────────────────
 # CONNECTION TO RABBITMQ
@@ -172,4 +184,4 @@ def validate_input(data):
 # ──────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)

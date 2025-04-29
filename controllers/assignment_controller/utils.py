@@ -58,37 +58,39 @@ def plot_map(path, frontiers, pose, grid_map):
     plt.savefig("../../web/static/map.png", bbox_inches='tight') # Save the figure to a file 
 
 # Function to log status of the robot
-def log_status(pose, path, frontiers, current_target, end_target):
+def create_status_update(name, pose, path, frontiers, current_target, end_target):
     mx, my = world_to_map(pose[0], pose[1])
-    print(f'\n--- Iterationstatus ---')
+    status_msg = ""
     
-    # Robot position
-    print(f'Robot position: World = ({pose[0]:.2f}, {pose[1]:.2f}) | Map = ({mx}, {my})')
-    
-    # Frontiers
-    print(f'Amount of frontiers: {len(frontiers)}')
-
-    # End target
-    if end_target:
-        end_world = map_to_world(end_target[0], end_target[1])
-        print(f'End target: World = ({end_world[0]:.2f}, {end_world[1]:.2f}) | Map = {end_target}')
-    else:
-        print('End target: None')
-
-    # Current target
-    if current_target:
-        curr_map = world_to_map(current_target[0], current_target[1])
-        print(f'Current target: World = ({current_target[0]:.2f}, {current_target[1]:.2f}) | Map = {curr_map}')
-    else:
-        print('Current target: None')
-
-    # Status
+    # Determine status
     if not frontiers and not path:
-        print('Status: No frontiers and No path — Stopping')
+        status_msg = "idle"
     elif not path:
-        print('Status: WAIT on pathplanning...')
+        status_msg = "waiting_for_path"
     elif path:
-        print(f'Status: Following path, ({len(path)} steps to go)')
+        status_msg = "navigating"
     else:
-        print('Status: UKNOWN')
-    print('--- End Iterationstatus ---\n')
+        status_msg = "unknown"
+
+    status_update = {
+        "robot_id": name,
+        "position": {
+            "world": {"x": round(pose[0], 2), "y": round(pose[1], 2), "theta": round(pose[2], 2)},
+            "map": {"x": mx, "y": my}
+        },
+        "frontiers_count": len(frontiers),
+        "path_length": len(path) if path else 0,
+        "status": status_msg,
+        "current_target": {
+            "world": {"x": round(current_target[0], 2), "y": round(current_target[1], 2)},
+            "map": {"x": world_to_map(current_target[0], current_target[1])[0],
+                    "y": world_to_map(current_target[0], current_target[1])[1]}
+        } if current_target else None,
+        "end_target": {
+            "world": {"x": round(map_to_world(end_target[0], end_target[1])[0], 2),
+                      "y": round(map_to_world(end_target[0], end_target[1])[1], 2)},
+            "map": {"x": end_target[0], "y": end_target[1]}
+        } if end_target else None
+    }
+
+    return status_update
