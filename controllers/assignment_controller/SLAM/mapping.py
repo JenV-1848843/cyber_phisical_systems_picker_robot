@@ -1,28 +1,29 @@
 import math
 import numpy as np
-import queue
+
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
 # y = y-coordinate in world space
 # Returns (mx, my) = map coordinates
-def world_to_map(x, y, map_width, map_height, cell_size):
-    mx = int((x + map_width / 2) / cell_size)
-    my = int((y + map_height / 2) / cell_size)
+def world_to_map(x, y):
+    mx = int((x + MAP_WIDTH / 2) / CELL_SIZE)
+    my = int((y + MAP_HEIGHT / 2) / CELL_SIZE)
     return mx, my
 
 # Convert map coordinates to world coordinates
 # mx = x-coordinate in map space
 # my = y-coordinate in map space
 # Returns (x, y) = world coordinates
-def map_to_world(mx, my, map_width, map_height, cell_size):
-    x = mx * cell_size - map_width / 2 + cell_size / 2
-    y = my * cell_size - map_height / 2 + cell_size / 2
+def map_to_world(mx, my):
+    x = mx * CELL_SIZE - MAP_WIDTH / 2 + CELL_SIZE / 2
+    y = my * CELL_SIZE - MAP_HEIGHT / 2 + CELL_SIZE / 2
     return x, y
 
 # Check if the coordinates are within the bounds of the map
-def in_bounds(mx, my, map_size_x, map_size_y):
-    return 0 <= mx <= map_size_x - 1 and 0 <= my <= map_size_y - 1
+def in_bounds(mx, my):
+    return 0 <= mx <= MAP_SIZE_X - 1 and 0 <= my <= MAP_SIZE_Y - 1
 
 # Bresenham's line algorithm to find points between two coordinates
 # x0, y0 = coordinates of the robot
@@ -41,8 +42,8 @@ def bresenham(x0, y0, x1, y1):
     return points
 
 # Function to get the cells of the corridor the robot's in
-def get_corridor_cells(pose, map_width, map_height, cell_size):
-    rx, ry = world_to_map(pose[0], pose[1], map_width, map_height, cell_size)
+def get_corridor_cells(pose):
+    rx, ry = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
 
     corridorCells = []
 
@@ -67,11 +68,11 @@ def get_corridor_cells(pose, map_width, map_height, cell_size):
     return corridorCells
 
 # Update the map based on lidar readings and occupied corridors
-def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, map_height, cell_size, map_size_x, map_size_y, obstacle_threshold, init_map, robot_id):
+def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
     '''
     # 2: define where in the map lie occupied corridors
     '''
-    corridorCells = get_corridor_cells(pose, map_width, map_height, cell_size)
+    corridorCells = get_corridor_cells(pose)
 
     # FOR OCCUPANCY MAP TESTING
     # if count <= 100:
@@ -85,7 +86,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
     #     corridorCells = []
 
     if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
-        occupancy_map = np.zeros((map_size_x, map_size_y), dtype=np.int8)
+        occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
     else:
         for (x, y) in corridorCells:
             occupancy_map[x][y] = robot_id
@@ -93,7 +94,6 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
     '''
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
     '''
-
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
@@ -102,7 +102,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
     angle_step = fov / res
 
     rx, ry, rtheta = pose
-    map_x, map_y = world_to_map(rx, ry, map_width, map_height, cell_size)
+    map_x, map_y = world_to_map(rx, ry)
     max_range = 1.5  # LIDAR range cap
 
     for i, distance in enumerate(ranges):
@@ -118,12 +118,12 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
 
         end_x = rx + math.cos(angle) * distance
         end_y = ry + math.sin(angle) * distance
-        end_mx, end_my = world_to_map(end_x, end_y, map_width, map_height, cell_size)
+        end_mx, end_my = world_to_map(end_x, end_y)
 
         line = bresenham(map_x, map_y, end_mx, end_my)
 
         for j, (x, y) in enumerate(line):
-            if not in_bounds(x, y, map_size_x, map_size_y):
+            if not in_bounds(x, y):
                 break
 
             if hit_obstacle and j == len(line) - 1:
@@ -132,34 +132,37 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
                 val = min(val, 255)
                 obstacle_map[x][y] = val
 
-                if obstacle_map[x][y] >= obstacle_threshold:
-                    grid_map[x][y] = -1  # If the score is higher than threshold, mark as obstacle
+                if obstacle_map[x][y] >= OBSTACLE_THRESHOLD:
+                    grid_map[x][y] = OBSTACLE  # If the score is higher than threshold, mark as obstacle
             else:
                 # Free space -> decrease score of being an obstacle
                 val = int(obstacle_map[x][y]) - 1
                 val = max(val, 0)
                 obstacle_map[x][y] = val
 
-                if obstacle_map[x][y] < obstacle_threshold:
-                    grid_map[x][y] = 1  # If the score is lower than threshold, mark as free space
+                if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
+                    grid_map[x][y] = FREE  # If the score is lower than threshold, mark as free space
 
     return grid_map, obstacle_map, occupancy_map
 
 
 # Inflate the obstacles in the grid map to create a safety buffer
-def inflate_obstacles(grid_map, map_size_x, map_size_y, cell_size, safety_radius):
-    radius = max(1, int(safety_radius / cell_size))
-    for x in range(map_size_x):
-        for y in range(map_size_y):
+def inflate_obstacles(grid_map):
+    for x in range(MAP_SIZE_X):
+        for y in range(MAP_SIZE_Y):
+            if grid_map[x][y] == INFLATED:
+                grid_map[x][y] = FREE
+
+    for x in range(MAP_SIZE_X):
+        for y in range(MAP_SIZE_Y):
             if grid_map[x][y] != -1:
                 continue
             
-            for dx in range(-radius, radius + 1):
-                for dy in range(-radius, radius + 1):
+            for dx in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):
+                for dy in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):
                     nx, ny = x + dx, y + dy
-                    if not in_bounds(nx, ny, map_size_x, map_size_y) or grid_map[nx][ny] == -1:
+                    if not in_bounds(nx, ny) or grid_map[nx][ny] == -1:
                         continue
                         
-                    grid_map[nx][ny] = 10  # Inflated cell
-
+                    grid_map[nx][ny] = INFLATED  # Inflated cell
     return grid_map

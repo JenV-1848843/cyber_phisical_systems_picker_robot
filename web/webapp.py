@@ -1,4 +1,6 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
+import threading
 import json
 import os
 import time
@@ -10,6 +12,7 @@ import numpy as np
 # ──────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Map settings
 MAP_DIR = "maps"
@@ -24,6 +27,37 @@ MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
 # RabbitMQ settings
 rabbitmq_host = 'localhost'
 rabbitmq_queue = 'task_queue'
+
+# Robot initialization settings
+ROBOT_IDS = {"Bobbie": -10, "Bubbie": -11}
+ROBOT_START_POSES = {"Bobbie": [-1.5, 0.0, 0.0], "Bubbie": [-1.5, 1.0, 0]}  # [x, y, theta]
+robot_index = 0
+lock = threading.Lock()
+
+# ──────────────────────────────────────────────────────────────
+# INITIALIZE ROBOTS
+# ──────────────────────────────────────────────────────────────
+
+@app.route('/robot/initialize/<name>', methods=['GET'])
+def initialize_robot(name):
+    with lock:
+        if name in ROBOT_IDS and name in ROBOT_START_POSES:
+            return jsonify({
+                "robot_id": ROBOT_IDS[name],
+                "start_pose": ROBOT_START_POSES[name]
+            }), 200
+        else:
+            return jsonify({"error": f"Robot not found with name '{name}'"}), 404
+
+# ──────────────────────────────────────────────────────────────
+# SOCKETIO FOR ROBOT UPDATES
+# ──────────────────────────────────────────────────────────────
+
+@socketio.on('status_update')
+def handle_status_update(data):
+    with lock:
+        robot_id = data.get('robot_id')
+        print(f"Received status update from robot {robot_id}: {data}")
 
 # ──────────────────────────────────────────────────────────────
 # CONNECTION TO RABBITMQ
@@ -51,48 +85,6 @@ def connect_to_rabbitmq():
             return None
 
     return None
-
-# ──────────────────────────────────────────────────────────────
-# INITIALIZE MAP
-# ──────────────────────────────────────────────────────────────
-
-def initialize_empty_maps():
-    os.makedirs(MAP_DIR, exist_ok=True)
-    empty_grid = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
-    np.save(GRID_FILE, empty_grid)
-
-    empty_obstacles = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
-    np.save(OBSTACLE_FILE, empty_obstacles)
-
-# ──────────────────────────────────────────────────────────────
-# ROUTES - MAP API
-# ──────────────────────────────────────────────────────────────
-
-@app.route('/map', methods=['GET'])
-def get_grid_map():
-    try:
-        return send_file(GRID_FILE, mimetype='application/octet-stream')
-    except FileNotFoundError:
-        return jsonify({"error": "Grid map not found"}), 404
-
-@app.route('/obstacles', methods=['GET'])
-def get_obstacle_map():
-    try:
-        return send_file(OBSTACLE_FILE, mimetype='application/octet-stream')
-    except FileNotFoundError:
-        return jsonify({"error": "Obstacle map not found"}), 404
-
-@app.route('/map', methods=['POST'])
-def update_maps():
-    grid = request.files.get("grid_map")
-    obstacles = request.files.get("obstacle_map")
-
-    if grid:
-        grid.save(GRID_FILE)
-    if obstacles:
-        obstacles.save(OBSTACLE_FILE)
-
-    return jsonify({"status": "Maps updated"}), 200
 
 # ──────────────────────────────────────────────────────────────
 # ROUTES - WEBAPP + RabbitMQ
@@ -192,5 +184,4 @@ def validate_input(data):
 # ──────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    initialize_empty_maps()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
