@@ -91,9 +91,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
         for (x, y) in corridorCells:
             occupancy_map[x][y] = robot_id
 
-    '''
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
-    '''
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
