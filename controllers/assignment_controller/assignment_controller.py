@@ -40,6 +40,7 @@ MAX_SPEED = 6.28
 SAFETY_RADIUS = CELL_SIZE  # meters
 OBSTACLE_THRESHOLD = 100  # meters
 MAP_SERVER = "http://localhost:5000"  # Flask server 
+ROBOT_ID = 1
 
 
 # ──────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ prev_right = 0.0
 # Map initialization from server
 grid_map = download_map("map", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 obstacle_map = download_map("obstacles", (MAP_SIZE_X, MAP_SIZE_Y), np.int16)
+occupancy_map = download_map("occupancy", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 
 # ──────────────────────────────────────────────────────────────
 # FUNCTIONS FOR CONCURRENCY
@@ -86,7 +88,7 @@ def background_logger(interval):
             time.sleep(interval)
             log_status(pose, path, frontiers, current_target, end_target,
                        MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-            plot_map(path, frontiers, pose, grid_map,
+            plot_map(path, frontiers, pose, grid_map, occupancy_map,
                      MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
             upload_maps(grid_map, obstacle_map)
         except Exception as e:
@@ -131,7 +133,7 @@ while robot.step(TIME_STEP) != -1:
     # 2. Update the map with lidar data
     if robot.getTime() > 3:
         init_map = False
-    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map)
+    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map, ROBOT_ID)
 
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
