@@ -14,9 +14,10 @@ import math
 import threading
 import time
 import concurrent.futures
+import copy
 
 # Config
-from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP
+from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, OBSTACLE
 
 # Custom modules
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
@@ -153,8 +154,8 @@ while robot.step(TIME_STEP) != -1:
 
         if not path:
             with concurrent.futures.ProcessPoolExecutor() as executor:
-                tasks = [(robot_position, f, grid_map) for f in frontiers]
-                results = list(executor.map(find_path_to_frontier, tasks))
+                tasks = [(robot_position, f, grid_map.copy()) for f in frontiers]
+                results = list(executor.map(find_path_to_frontier, tasks)) # executor.map is blocking -> wait for all tasks to finish
 
             valid_paths = [(trial, frontier) for trial, frontier in results if trial]
 
@@ -176,7 +177,7 @@ while robot.step(TIME_STEP) != -1:
     if path:
         rerouting = False
         for cell in path:
-            if grid_map[cell[0], cell[1]] < 0:
+            if grid_map[cell[0], cell[1]] == OBSTACLE:
                 print("End target is an obstacle — stopping.")
                 path = []
                 current_target = None

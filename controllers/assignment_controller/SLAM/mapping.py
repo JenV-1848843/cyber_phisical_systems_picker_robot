@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -82,7 +82,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, init_map):
                 obstacle_map[x][y] = val
 
                 if obstacle_map[x][y] >= OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = -1  # If the score is higher than threshold, mark as obstacle
+                    grid_map[x][y] = OBSTACLE  # If the score is higher than threshold, mark as obstacle
             else:
                 # Free space -> decrease score of being an obstacle
                 val = int(obstacle_map[x][y]) - 1
@@ -90,13 +90,18 @@ def update_map(pose, lidar, grid_map, obstacle_map, init_map):
                 obstacle_map[x][y] = val
 
                 if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = 1  # If the score is lower than threshold, mark as free space
+                    grid_map[x][y] = FREE  # If the score is lower than threshold, mark as free space
 
     return grid_map, obstacle_map
 
 
 # Inflate the obstacles in the grid map to create a safety buffer
 def inflate_obstacles(grid_map):
+    for x in range(MAP_SIZE_X):
+        for y in range(MAP_SIZE_Y):
+            if grid_map[x][y] == INFLATED:
+                grid_map[x][y] = FREE
+
     for x in range(MAP_SIZE_X):
         for y in range(MAP_SIZE_Y):
             if grid_map[x][y] != -1:
@@ -108,6 +113,5 @@ def inflate_obstacles(grid_map):
                     if not in_bounds(nx, ny) or grid_map[nx][ny] == -1:
                         continue
                         
-                    grid_map[nx][ny] = 10  # Inflated cell
-
+                    grid_map[nx][ny] = INFLATED  # Inflated cell
     return grid_map

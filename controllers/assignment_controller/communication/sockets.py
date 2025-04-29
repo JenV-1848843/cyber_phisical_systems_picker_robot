@@ -21,5 +21,5 @@ def send_status_update(status_update):
         sio.emit("status_update", status_update)
         # print(f"📤 Status verzonden: {status_update}")
     except Exception as e:
-        print(f"❌ Fout bij verzenden status update: {e}")
+        print(f"Fout bij verzenden status update: {e}")
 

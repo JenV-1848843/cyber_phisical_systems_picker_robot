@@ -3,6 +3,8 @@ import math
 
 from config import MAP_SIZE_X, MAP_SIZE_Y, MAX_SPEED
 
+from SLAM.mapping import in_bounds
+
 def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
 def astar(start, goal, cost_map):
@@ -10,8 +12,10 @@ def astar(start, goal, cost_map):
     open_set, came_from = [], {}
     g = {start: 0}; f = {start: heuristic(start, goal)}
     heapq.heappush(open_set, (f[start], start))
+    open_set_hash = {start}
     while open_set:
         current = heapq.heappop(open_set)[1]
+        open_set_hash.remove(current)
         if current == goal:
             path = []
             while current in came_from:
@@ -19,14 +23,16 @@ def astar(start, goal, cost_map):
             return path[::-1]
         for dx, dy in dirs:
             nx, ny = current[0]+dx, current[1]+dy
-            if not (0 <= nx < MAP_SIZE_X and 0 <= ny < MAP_SIZE_Y): continue
+            if not in_bounds(nx, ny): continue
             if cost_map[nx][ny] < 0: continue
             tentative = g[current] + cost_map[nx][ny]
             if tentative < g.get((nx, ny), float('inf')):
                 came_from[(nx, ny)] = current
                 g[(nx, ny)] = tentative
                 f[(nx, ny)] = tentative + heuristic((nx, ny), goal)
-                heapq.heappush(open_set, (f[(nx, ny)], (nx, ny)))
+                if (nx, ny) not in open_set_hash:
+                    heapq.heappush(open_set, (f[(nx, ny)], (nx, ny)))
+                    open_set_hash.add((nx, ny))
     return []
 
 def drive_to_target(target, pose, left_motor, right_motor):

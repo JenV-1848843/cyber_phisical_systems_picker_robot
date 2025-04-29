@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, FREE, INFLATED, UNKNOWN, OBSTACLE
 
 from SLAM.mapping import world_to_map, map_to_world
 
@@ -10,10 +10,10 @@ from SLAM.mapping import world_to_map, map_to_world
 def plot_map(path, frontiers, pose, grid_map):
     img = np.zeros((MAP_SIZE_X, MAP_SIZE_Y, 3), dtype=np.uint8)
 
-    img[grid_map == 10] = [255, 165, 0]     # Inflated = orange
-    img[grid_map == -1] = [0, 0, 0]         # Obstacles = black
-    img[grid_map == 0] = [100, 100, 100]    # Unknown = gray
-    img[grid_map == 1] = [255, 255, 255]    # Free = white
+    img[grid_map == INFLATED] = [255, 165, 0]     # Inflated = orange
+    img[grid_map == OBSTACLE] = [0, 0, 0]         # Obstacles = black
+    img[grid_map == UNKNOWN] = [100, 100, 100]    # Unknown = gray
+    img[grid_map == FREE] = [255, 255, 255]    # Free = white
 
     # Frontiers = red
     if frontiers:
