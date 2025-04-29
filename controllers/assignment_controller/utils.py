@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y
+
 from SLAM.mapping import world_to_map, map_to_world
 
 # Function to plot the grid map
-def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width, map_height, cell_size):
-    img = np.zeros((max_size_X, map_size_y, 3), dtype=np.uint8)
+def plot_map(path, frontiers, pose, grid_map):
+    img = np.zeros((MAP_SIZE_X, MAP_SIZE_Y, 3), dtype=np.uint8)
 
     img[grid_map == 10] = [255, 165, 0]     # Inflated = orange
     img[grid_map == -1] = [0, 0, 0]         # Obstacles = black
@@ -16,29 +18,29 @@ def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width,
     # Frontiers = red
     if frontiers:
         for fx, fy in frontiers:
-            if 0 <= fx < max_size_X and 0 <= fy < map_size_y:
+            if 0 <= fx < MAP_SIZE_X and 0 <= fy < MAP_SIZE_Y:
                 img[fx, fy] = [255, 0, 0]
 
     # Robotposition = blue
-    rx, ry = world_to_map(pose[0], pose[1], map_width, map_height, cell_size)
-    if 0 <= rx < max_size_X and 0 <= ry < map_size_y:
+    rx, ry = world_to_map(pose[0], pose[1])
+    if 0 <= rx < MAP_SIZE_X and 0 <= ry < MAP_SIZE_Y:
         img[rx, ry] = [0, 255, 255]
 
     # Path = purple | target = green
     if path:
         for (px, py) in path:
-            if 0 <= px < max_size_X and 0 <= py < map_size_y:
+            if 0 <= px < MAP_SIZE_X and 0 <= py < MAP_SIZE_Y:
                 img[px, py] = [128, 0, 128]
         if px == path[-1][0] and py == path[-1][1]:
             img[px, py] = [0, 255, 0]
 
     plt.clf()
     plt.imshow(img.transpose((1, 0, 2)), origin='lower',
-               extent=[-map_width/2, map_width/2, -map_height/2, map_height/2])
+               extent=[-MAP_WIDTH/2, MAP_WIDTH/2, -MAP_HEIGHT/2, MAP_HEIGHT/2])
 
     # Show grid lines without labels
-    major_ticks_x = np.arange(-map_width/2, map_width/2 + cell_size, cell_size)
-    major_ticks_y = np.arange(-map_height/2, map_height/2 + cell_size, cell_size)
+    major_ticks_x = np.arange(-MAP_WIDTH/2, MAP_WIDTH/2 + CELL_SIZE, CELL_SIZE)
+    major_ticks_y = np.arange(-MAP_HEIGHT/2, MAP_HEIGHT/2 + CELL_SIZE, CELL_SIZE)
     plt.xticks(major_ticks_x, [''] * len(major_ticks_x))  # lege labels, grid blijft
     plt.yticks(major_ticks_y, [''] * len(major_ticks_y))
     plt.grid(which='major', color='gray', linestyle='--', linewidth=0.3)
@@ -56,8 +58,8 @@ def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width,
     plt.savefig("../../web/static/map.png", bbox_inches='tight') # Save the figure to a file 
 
 # Function to log status of the robot
-def log_status(pose, path, frontiers, current_target, end_target, map_width, map_height, cell_size):
-    mx, my = world_to_map(pose[0], pose[1], map_width, map_height, cell_size)
+def log_status(pose, path, frontiers, current_target, end_target):
+    mx, my = world_to_map(pose[0], pose[1])
     print(f'\n--- Iterationstatus ---')
     
     # Robot position
@@ -68,14 +70,14 @@ def log_status(pose, path, frontiers, current_target, end_target, map_width, map
 
     # End target
     if end_target:
-        end_world = map_to_world(end_target[0], end_target[1], map_width, map_height, cell_size)
+        end_world = map_to_world(end_target[0], end_target[1])
         print(f'End target: World = ({end_world[0]:.2f}, {end_world[1]:.2f}) | Map = {end_target}')
     else:
         print('End target: None')
 
     # Current target
     if current_target:
-        curr_map = world_to_map(current_target[0], current_target[1], map_width, map_height, cell_size)
+        curr_map = world_to_map(current_target[0], current_target[1])
         print(f'Current target: World = ({current_target[0]:.2f}, {current_target[1]:.2f}) | Map = {curr_map}')
     else:
         print('Current target: None')

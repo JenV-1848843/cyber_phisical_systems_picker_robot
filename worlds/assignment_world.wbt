@@ -11,9 +11,9 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.3436394112396688 0.4103395642643077 0.8447090605896398 1.5621673138041712
-  position -0.8372361709288585 -6.529347147430552 6.2786189045911485
-  follow "TurtleBot3Burger"
+  orientation -0.26779897354574034 0.3618198857033969 0.8929558108201261 1.3841969754072159
+  position -1.7803817022126203 -6.913715966240602 4.825502671923027
+  follow "Bobbie"
   followType "Pan and Tilt Shot"
 }
 TexturedBackground {
@@ -23,6 +23,7 @@ TexturedBackgroundLight {
 TurtleBot3Burger {
   translation -1.5 0 -0.000494379
   rotation 0 0 1 0
+  name "Bobbie"
   controller "assignment_controller"
   extensionSlot [
     GPS {
