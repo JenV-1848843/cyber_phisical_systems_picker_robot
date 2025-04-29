@@ -41,8 +41,59 @@ def bresenham(x0, y0, x1, y1):
         if e2 < dx: err += dx; y0 += sy
     return points
 
-# Update the map based on lidar readings
-def update_map(pose, lidar, grid_map, obstacle_map, init_map):
+# Function to get the cells of the corridor the robot's in
+def get_corridor_cells(pose):
+    rx, ry = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+
+    corridorCells = []
+
+    if 20 <= rx <= 49:
+        if 3 <= ry <= 6:
+            for x in range(20, 50):
+                for y in range(3, 7):
+                    corridorCells.append((x, y))
+        elif 13 <= ry <= 16:
+            for x in range(20, 50):
+                for y in range(13, 17):
+                    corridorCells.append((x, y))
+        elif 23 <= ry <= 26:
+            for x in range(20, 50):
+                for y in range(23, 27):
+                    corridorCells.append((x, y))
+        elif 33 <= ry <= 36:
+            for x in range(20, 50):
+                for y in range(33, 37):
+                    corridorCells.append((x, y))
+
+    return corridorCells
+
+# Update the map based on lidar readings and occupied corridors
+def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
+    '''
+    # 2: define where in the map lie occupied corridors
+    '''
+    corridorCells = get_corridor_cells(pose)
+
+    # FOR OCCUPANCY MAP TESTING
+    # if count <= 100:
+    # corridorCells = []
+
+    # for x in range(20, 50):
+    #     for y in range(3, 7):
+    #         corridorCells.append((x, y))
+    
+    # else:
+    #     corridorCells = []
+
+    if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
+        occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+    else:
+        for (x, y) in corridorCells:
+            occupancy_map[x][y] = robot_id
+
+    '''
+    # 1: place obstacles or free space in the map based on lidar readings and further calculations
+    '''
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
@@ -92,7 +143,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, init_map):
                 if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
                     grid_map[x][y] = FREE  # If the score is lower than threshold, mark as free space
 
-    return grid_map, obstacle_map
+    return grid_map, obstacle_map, occupancy_map
 
 
 # Inflate the obstacles in the grid map to create a safety buffer

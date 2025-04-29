@@ -29,6 +29,12 @@ from communication.rest import initiate_robot
 from communication.sockets import connect_to_server, send_status_update
 
 # ──────────────────────────────────────────────────────────────
+# CONFIG
+# ──────────────────────────────────────────────────────────────
+
+ROBOT_ID = 1
+
+# ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
 # ──────────────────────────────────────────────────────────────
 robot = Robot()
@@ -68,6 +74,7 @@ prev_right = 0.0
 # Map initialization from server
 grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
+occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 
 # ──────────────────────────────────────────────────────────────
 # FUNCTIONS FOR CONCURRENCY
@@ -83,14 +90,13 @@ def background_logger(interval):
             status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
             plot_map(path, frontiers, pose, grid_map)
-
         except Exception as e:
             print(f"Error in background logger: {e}")
 
 def find_path_to_frontier(args):
     robot_pos, frontier, grid_map_local = args
     from SLAM.navigation import astar  # Import within process!
-    return (astar(robot_pos, frontier, grid_map_local), frontier)
+    return (astar(robot_pos, frontier, grid_map_local, occupancy_map, ROBOT_ID), frontier)
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -123,7 +129,8 @@ while robot.step(TIME_STEP) != -1:
     # 2. Update the map with lidar data
     if robot.getTime() > 3:
         init_map = False
-    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, init_map)
+
+    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
 
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
@@ -133,7 +140,7 @@ while robot.step(TIME_STEP) != -1:
 
     # === HANDLE MANUAL POSITION FIRST ===
     if MANUAL_POSITION is not None and not path:
-        trial = astar(robot_position, MANUAL_POSITION, grid_map)
+        trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
         if trial:
             path = trial
             end_target = path[-1]
@@ -204,7 +211,7 @@ while robot.step(TIME_STEP) != -1:
                 right_motor.setVelocity(0.0)
                 pick_counter += 1
             else:
-                trial = astar(robot_position, DEFAULT_POSITION, grid_map)
+                trial = astar(robot_position, DEFAULT_POSITION, grid_map, occupancy_map, ROBOT_ID)
                 if trial:
                     path = trial
                     end_target = path[-1]
