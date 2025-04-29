@@ -40,6 +40,7 @@ MAX_SPEED = 6.28
 SAFETY_RADIUS = CELL_SIZE  # meters
 OBSTACLE_THRESHOLD = 100  # meters
 MAP_SERVER = "http://localhost:5000"  # Flask server 
+ROBOT_ID = 1
 
 
 # ──────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ prev_right = 0.0
 # Map initialization from server
 grid_map = download_map("map", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 obstacle_map = download_map("obstacles", (MAP_SIZE_X, MAP_SIZE_Y), np.int16)
+occupancy_map = download_map("occupancy", (MAP_SIZE_X, MAP_SIZE_Y), np.int8)
 
 # ──────────────────────────────────────────────────────────────
 # FUNCTIONS FOR CONCURRENCY
@@ -86,7 +88,7 @@ def background_logger(interval):
             time.sleep(interval)
             log_status(pose, path, frontiers, current_target, end_target,
                        MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-            plot_map(path, frontiers, pose, grid_map,
+            plot_map(path, frontiers, pose, grid_map, occupancy_map,
                      MAP_SIZE_X, MAP_SIZE_Y, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
             upload_maps(grid_map, obstacle_map)
         except Exception as e:
@@ -95,7 +97,7 @@ def background_logger(interval):
 def find_path_to_frontier(args):
     robot_pos, frontier, grid_map_local, map_size_x, map_size_y = args
     from SLAM.navigation import astar  # Import within process!
-    return (astar(robot_pos, frontier, grid_map_local, map_size_x, map_size_y), frontier)
+    return (astar(robot_pos, frontier, grid_map_local, occupancy_map, map_size_x, map_size_y, ROBOT_ID), frontier)
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -119,7 +121,6 @@ pick_counter = 0
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
 logger_thread.start()
 
-
 # Main loop
 while robot.step(TIME_STEP) != -1:
     # 1. Update the robot's pose using odometry and gyroscope
@@ -131,7 +132,7 @@ while robot.step(TIME_STEP) != -1:
     # 2. Update the map with lidar data
     if robot.getTime() > 3:
         init_map = False
-    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map)
+    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, init_map, ROBOT_ID)
 
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
@@ -141,7 +142,7 @@ while robot.step(TIME_STEP) != -1:
 
     # === HANDLE MANUAL POSITION FIRST ===
     if MANUAL_POSITION is not None and not path:
-        trial = astar(robot_position, MANUAL_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y, ROBOT_ID)
         if trial:
             path = trial
             end_target = path[-1]
@@ -212,7 +213,7 @@ while robot.step(TIME_STEP) != -1:
                 right_motor.setVelocity(0.0)
                 pick_counter += 1
             else:
-                trial = astar(robot_position, DEFAULT_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+                trial = astar(robot_position, DEFAULT_POSITION, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y, ROBOT_ID)
                 if trial:
                     path = trial
                     end_target = path[-1]
@@ -228,7 +229,6 @@ while robot.step(TIME_STEP) != -1:
     # === If no path (backup): return to start ===
     else:
         end_target = world_to_map(-1.5, 0.0, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        path = astar(robot_position, end_target, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        path = astar(robot_position, end_target, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y, ROBOT_ID)
         if path:
             current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-

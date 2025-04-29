@@ -5,13 +5,16 @@ import math
 from SLAM.mapping import world_to_map, map_to_world
 
 # Function to plot the grid map
-def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width, map_height, cell_size):
+def plot_map(path, frontiers, pose, grid_map, occupancy_map, max_size_X, map_size_y, map_width, map_height, cell_size):
     img = np.zeros((max_size_X, map_size_y, 3), dtype=np.uint8)
 
     img[grid_map == 10] = [255, 165, 0]     # Inflated = orange
     img[grid_map == -1] = [0, 0, 0]         # Obstacles = black
     img[grid_map == 0] = [100, 100, 100]    # Unknown = gray
     img[grid_map == 1] = [255, 255, 255]    # Free = white
+    img[occupancy_map == 1] = [102, 102, 255]    # Corridor occupied by robot 1 == blue
+    img[occupancy_map == 2] = [255, 102, 102]    # Corridor occupied by robot 2 == red 
+    img[occupancy_map == 3] = [255, 255, 102]    # Corridor occupied by robot 3 == yellow 
 
     # Frontiers = red
     if frontiers:
@@ -31,6 +34,13 @@ def plot_map(path, frontiers, pose, grid_map, max_size_X, map_size_y, map_width,
                 img[px, py] = [128, 0, 128]
         if px == path[-1][0] and py == path[-1][1]:
             img[px, py] = [0, 255, 0]
+
+    # Highlight the corridor the respective robot is in
+    # for x in range(max_size_X + 1):
+    #     for y in range(map_size_y + 1):
+    #         if occupancy_map[x, y] == 1:
+    #             print("occupied space found")
+    #         img[x, y] = [255, 255, 102]
 
     plt.clf()
     plt.imshow(img.transpose((1, 0, 2)), origin='lower',
