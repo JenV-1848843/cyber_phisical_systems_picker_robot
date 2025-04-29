@@ -13,8 +13,8 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, max_size_X, map_siz
     img[grid_map == 0] = [100, 100, 100]    # Unknown = gray
     img[grid_map == 1] = [255, 255, 255]    # Free = white
     img[occupancy_map == 1] = [102, 102, 255]    # Corridor occupied by robot 1 == blue
-    # img[occupancy_map == 2] = [255, 102, 102]    # Corridor occupied by robot 2 == red 
-    # img[occupancy_map == 3] = [255, 255, 102]    # Corridor occupied by robot 3 == yellow 
+    img[occupancy_map == 2] = [255, 102, 102]    # Corridor occupied by robot 2 == red 
+    img[occupancy_map == 3] = [255, 255, 102]    # Corridor occupied by robot 3 == yellow 
 
     # Frontiers = red
     if frontiers:

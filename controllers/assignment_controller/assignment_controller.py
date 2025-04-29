@@ -97,7 +97,7 @@ def background_logger(interval):
 def find_path_to_frontier(args):
     robot_pos, frontier, grid_map_local, map_size_x, map_size_y = args
     from SLAM.navigation import astar  # Import within process!
-    return (astar(robot_pos, frontier, grid_map_local, map_size_x, map_size_y), frontier)
+    return (astar(robot_pos, frontier, grid_map_local, occupancy_map, map_size_x, map_size_y), frontier)
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -121,7 +121,6 @@ pick_counter = 0
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
 logger_thread.start()
 
-
 # Main loop
 while robot.step(TIME_STEP) != -1:
     # 1. Update the robot's pose using odometry and gyroscope
@@ -143,7 +142,7 @@ while robot.step(TIME_STEP) != -1:
 
     # === HANDLE MANUAL POSITION FIRST ===
     if MANUAL_POSITION is not None and not path:
-        trial = astar(robot_position, MANUAL_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y)
         if trial:
             path = trial
             end_target = path[-1]
@@ -214,7 +213,7 @@ while robot.step(TIME_STEP) != -1:
                 right_motor.setVelocity(0.0)
                 pick_counter += 1
             else:
-                trial = astar(robot_position, DEFAULT_POSITION, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+                trial = astar(robot_position, DEFAULT_POSITION, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y)
                 if trial:
                     path = trial
                     end_target = path[-1]
@@ -230,7 +229,6 @@ while robot.step(TIME_STEP) != -1:
     # === If no path (backup): return to start ===
     else:
         end_target = world_to_map(-1.5, 0.0, MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-        path = astar(robot_position, end_target, grid_map, MAP_SIZE_X, MAP_SIZE_Y)
+        path = astar(robot_position, end_target, grid_map, occupancy_map, MAP_SIZE_X, MAP_SIZE_Y)
         if path:
             current_target = map_to_world(path[0][0], path[0][1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
-
