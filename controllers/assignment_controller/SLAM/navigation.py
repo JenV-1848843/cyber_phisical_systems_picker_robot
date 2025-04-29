@@ -3,7 +3,7 @@ import math
 
 def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
 
-def astar(start, goal, cost_map, occupancy_map, map_size_x, map_size_y):
+def astar(start, goal, cost_map, occupancy_map, map_size_x, map_size_y, robot_id):
     dirs = [(0,1),(1,0),(-1,0),(0,-1)]
     open_set, came_from = [], {}
     g = {start: 0}; f = {start: heuristic(start, goal)}
@@ -18,7 +18,7 @@ def astar(start, goal, cost_map, occupancy_map, map_size_x, map_size_y):
 
             # Check if at any point the calculated path passes through an occupied corridor
             for idx, (x, y) in enumerate(path):
-                if occupancy_map[x][y] != 0:
+                if occupancy_map[x][y] != 0 and occupancy_map[x][y] != robot_id:
                     # Cut off all nodes of the path after passing through an occupied corridor
                     path = path[:idx]
 

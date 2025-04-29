@@ -75,11 +75,11 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
 
     # FOR OCCUPANCY MAP TESTING
     # if count <= 100:
-    #     corridorCells = []
+    # corridorCells = []
 
-    #     for x in range(20, 50):
-    #         for y in range(3, 7):
-    #             corridorCells.append((x, y))
+    # for x in range(20, 50):
+    #     for y in range(3, 7):
+    #         corridorCells.append((x, y))
     
     # else:
     #     corridorCells = []
@@ -88,7 +88,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, map_width, ma
         occupancy_map = np.zeros((map_size_x, map_size_y), dtype=np.int8)
     else:
         for (x, y) in corridorCells:
-            occupancy_map[x][y] = robot_id 
+            occupancy_map[x][y] = robot_id
 
     '''
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
