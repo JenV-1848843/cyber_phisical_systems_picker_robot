@@ -85,13 +85,22 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     plt.legend(handles=legend_elements,
             loc='center left',
             bbox_to_anchor=(1.0, 0.5),
-            fontsize=16,
+            fontsize=12,
             frameon=True)
 
+    plt.tight_layout(rect=[0, 0, 0.85, 1])  # ruimte voor de legend
+
+    # # Interactieve plot tonen
+    plt.ion()  # interactieve modus aan
+    plt.show()  # toon venster
+    plt.pause(0.01)  # kleine pauze voor update
+
+    # Opslaan in buffer zoals eerder
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png', bbox_inches='tight')
     buffer.seek(0)
-    plt.close()
+
+    # plt.close() # NIET gebruiken als je het venster open wilt houden
 
     return base64.b64encode(buffer.read()).decode('utf-8')
 

@@ -84,7 +84,7 @@ def background_logger(interval):
             send_status_update(status_update)
             
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
-            send_map_update(map_img, ROBOT_NAME)
+            # send_map_update(map_img, ROBOT_NAME)
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -112,7 +112,7 @@ PICK_INTERVAL = 300
 pick_counter = 0
 
 # Start thread for logging and visualization
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(1.0,))
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.5,))
 logger_thread.start()
 
 # Main loop
@@ -190,7 +190,7 @@ while robot.step(TIME_STEP) != -1:
         if rerouting:
             continue
 
-        if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.15:
+        if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.10:
             path.pop(0)
             if path:
                 current_target = map_to_world(path[0][0], path[0][1])

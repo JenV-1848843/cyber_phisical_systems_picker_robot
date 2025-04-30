@@ -1,7 +1,7 @@
 # MAP VARIABLES
 CELL_SIZE = 0.1
 MAP_WIDTH = 5.0    # meters
-MAP_HEIGHT = 4.0   # meters
+MAP_HEIGHT = 4.4   # meters
 MAP_SIZE_X = int(MAP_WIDTH / CELL_SIZE)
 MAP_SIZE_Y = int(MAP_HEIGHT / CELL_SIZE)
 

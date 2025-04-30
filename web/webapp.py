@@ -87,7 +87,7 @@ def stream():
                     last_sent = merged_data.copy()
                     yield f"data: {json.dumps(merged_data)}\n\n"
 
-            time.sleep(1)
+            time.sleep(0.5)
 
     return Response(event_stream(), mimetype='text/event-stream')
 
