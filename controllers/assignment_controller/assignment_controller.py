@@ -84,7 +84,7 @@ def background_logger(interval):
             send_status_update(status_update)
             
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
-            # send_map_update(map_img, ROBOT_NAME)
+            send_map_update(map_img, ROBOT_NAME)
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -112,7 +112,7 @@ PICK_INTERVAL = 300
 pick_counter = 0
 
 # Start thread for logging and visualization
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.5,))
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
 logger_thread.start()
 
 # Main loop
@@ -179,7 +179,7 @@ while robot.step(TIME_STEP) != -1:
     if path:
         rerouting = False
         for cell in path:
-            if grid_map[cell[0], cell[1]] == OBSTACLE:
+            if grid_map[cell[0], cell[1]] < 0:
                 print("End target is an obstacle — stopping.")
                 path = []
                 current_target = None

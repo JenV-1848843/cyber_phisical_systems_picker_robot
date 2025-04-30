@@ -92,7 +92,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
             occupancy_map[x][y] = robot_id
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
-    lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
+    lidar_noise = 10 if init_map else 100 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
@@ -101,7 +101,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
-    max_range = 2.0  # LIDAR range cap
+    max_range = 1.5  # LIDAR range cap
 
     for i, distance in enumerate(ranges):
         if i < lidar_noise or i > len(ranges) - lidar_noise:
@@ -155,6 +155,22 @@ def inflate_obstacles(grid_map):
         for y in range(MAP_SIZE_Y):
             if grid_map[x][y] != -1:
                 continue
+            
+            # for cell in [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]:
+            #     cx, cy = cell
+            #     if not in_bounds(cx, cy) or grid_map[cx][cy] == -1:
+            #         continue
+
+            #     # Inflate the obstacle
+            #     grid_map[cx][cy] = 50
+
+            # for cell in [(x - 2, y), (x + 2, y), (x, y - 2), (x, y + 2)]:
+            #     cx, cy = cell
+            #     if not in_bounds(cx, cy) or grid_map[cx][cy] == -1:
+            #         continue
+
+                # # Inflate the obstacle
+                # grid_map[cx][cy] = 5
             
             for dx in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):
                 for dy in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):

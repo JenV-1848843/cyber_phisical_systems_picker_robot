@@ -17,7 +17,7 @@ WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
 MAX_SPEED = 6.28
 SAFETY_RADIUS = 1  # radius of cells to inflate around obstacles
-OBSTACLE_THRESHOLD = 100  # Amont of times a cell needs to be occupied to be considered an obstacle
+OBSTACLE_THRESHOLD = 50  # Amont of times a cell needs to be occupied to be considered an obstacle
 
 # SERVER CONFIGURATION
 SERVER_URL = "http://localhost:5000"  # Flask server

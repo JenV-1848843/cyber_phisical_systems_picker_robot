@@ -4,6 +4,7 @@ from matplotlib.patches import Patch
 import math
 import io
 import base64
+import warnings
 
 from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, FREE, INFLATED, UNKNOWN, OBSTACLE
 
@@ -47,6 +48,7 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     #             print("occupied space found")
     #         img[x, y] = [255, 255, 102]
 
+    warnings.filterwarnings("ignore", category=UserWarning, message=".*Starting a Matplotlib GUI outside of the main thread will likely fail.*")
     plt.clf()
     plt.imshow(img.transpose((1, 0, 2)), origin='lower',
                extent=[-MAP_WIDTH/2, MAP_WIDTH/2, -MAP_HEIGHT/2, MAP_HEIGHT/2])
@@ -91,16 +93,16 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     plt.tight_layout(rect=[0, 0, 0.85, 1])  # ruimte voor de legend
 
     # # Interactieve plot tonen
-    plt.ion()  # interactieve modus aan
-    plt.show()  # toon venster
-    plt.pause(0.01)  # kleine pauze voor update
+    # plt.ion()  # interactieve modus aan
+    # plt.show()  # toon venster
+    # plt.pause(0.01)  # kleine pauze voor update
 
     # Opslaan in buffer zoals eerder
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png', bbox_inches='tight')
     buffer.seek(0)
 
-    # plt.close() # NIET gebruiken als je het venster open wilt houden
+    plt.close() # NIET gebruiken als je het venster open wilt houden
 
     return base64.b64encode(buffer.read()).decode('utf-8')
 
