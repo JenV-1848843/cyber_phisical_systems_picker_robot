@@ -14,7 +14,6 @@ import math
 import threading
 import time
 import concurrent.futures
-import copy
 
 # Config
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, OBSTACLE
@@ -26,7 +25,7 @@ from SLAM.odometry import update_odometry
 from frontiers import find_frontier
 from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
-from communication.sockets import connect_to_server, send_status_update
+from communication.sockets import connect_to_server, send_status_update, send_map_update
 
 # ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
@@ -83,7 +82,9 @@ def background_logger(interval):
             time.sleep(interval)
             status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
-            plot_map(path, frontiers, pose, grid_map, occupancy_map)
+            
+            map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
+            send_map_update(map_img, ROBOT_NAME)
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -111,7 +112,7 @@ PICK_INTERVAL = 300
 pick_counter = 0
 
 # Start thread for logging and visualization
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(1.0,))
 logger_thread.start()
 
 # Main loop

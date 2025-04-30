@@ -101,7 +101,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
-    max_range = 1.5  # LIDAR range cap
+    max_range = 2.0  # LIDAR range cap
 
     for i, distance in enumerate(ranges):
         if i < lidar_noise or i > len(ranges) - lidar_noise:
