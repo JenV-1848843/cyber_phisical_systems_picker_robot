@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use a non-interactive backend
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import math
@@ -48,8 +50,6 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     #             print("occupied space found")
     #         img[x, y] = [255, 255, 102]
 
-    warnings.filterwarnings("ignore", category=UserWarning, message=".*Starting a Matplotlib GUI outside of the main thread will likely fail.*")
-    plt.clf()
     plt.imshow(img.transpose((1, 0, 2)), origin='lower',
                extent=[-MAP_WIDTH/2, MAP_WIDTH/2, -MAP_HEIGHT/2, MAP_HEIGHT/2])
 

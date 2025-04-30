@@ -1,9 +1,4 @@
 # === SLAM Controller for Webots ===
-#
-# To use this code, make sure MAP_WIDTH, MAP_HEIGHT are the same as the (rectangular) arena dimensions
-# CELL_SIZE can be adjusted to change the resolution of the map 
-# If you want to run the simulation use turtlebot3_burger.wbt
-# In utils.py comment/uncomment 'plt.pause(0.1)' (line 55) to see the plot in real-time in webots
 
 # ──────────────────────────────────────────────────────────────
 # IMPORTS
@@ -16,10 +11,10 @@ import time
 import concurrent.futures
 
 # Config
-from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, OBSTACLE
+from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, backup_map
 
 # Custom modules
-from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
+from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world, decay_obstacles
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from frontiers import find_frontier
@@ -107,12 +102,19 @@ exploring = True         # Flag to indicate if the robot is exploring
 
 # === Target position ===
 MANUAL_POSITION = None  # Set to None for automatic exploration
-# DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
 pick_counter = 0
 
+DECAY_INTERVAL = 50
+decay_counter = 0
+
+# NO EXPLORATION (comment or uncomment these two lines)
+# grid_map = backup_map.copy()
+# exploring = False
+# NO EXPLORATION
+
 # Start thread for logging and visualization
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.5,))
 logger_thread.start()
 
 # Main loop
@@ -127,6 +129,11 @@ while robot.step(TIME_STEP) != -1:
 
     grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
 
+    decay_counter += 1
+    if decay_counter >= DECAY_INTERVAL:
+        grid_map = decay_obstacles(grid_map, obstacle_map)
+        decay_counter = 0
+    
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
 
@@ -140,6 +147,7 @@ while robot.step(TIME_STEP) != -1:
             path = trial
             end_target = path[-1]
             current_target = map_to_world(path[0][0], path[0][1])
+
 
     # === EXPLORATION ===
     elif exploring:
@@ -180,10 +188,11 @@ while robot.step(TIME_STEP) != -1:
         rerouting = False
         for cell in path:
             if grid_map[cell[0], cell[1]] < 0:
-                print("End target is an obstacle — stopping.")
+                print("Rerouting — obstacle detected on path.")
+                grid_map[cell[0], cell[1]] = UNKNOWN
                 path = []
                 current_target = None
-                end_target = None
+                end_target = cell
                 rerouting = True
                 break
 
