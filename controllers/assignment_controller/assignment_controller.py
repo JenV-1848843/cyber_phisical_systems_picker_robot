@@ -89,7 +89,7 @@ def background_logger(interval):
             time.sleep(interval)
             status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
-            plot_map(path, frontiers, pose, grid_map)
+            plot_map(path, frontiers, pose, grid_map, occupancy_map)
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -227,6 +227,6 @@ while robot.step(TIME_STEP) != -1:
     # === If no path (backup): return to start ===
     else:
         end_target = DEFAULT_POSITION
-        path = astar(robot_position, end_target, grid_map)
+        path = astar(robot_position, end_target, grid_map, occupancy_map)
         if path:
             current_target = map_to_world(path[0][0], path[0][1])
