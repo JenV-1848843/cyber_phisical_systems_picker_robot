@@ -14,7 +14,7 @@ import concurrent.futures
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, backup_map
 
 # Custom modules
-from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world, decay_obstacles
+from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from frontiers import find_frontier
@@ -105,9 +105,6 @@ MANUAL_POSITION = None  # Set to None for automatic exploration
 PICK_INTERVAL = 300
 pick_counter = 0
 
-DECAY_INTERVAL = 50
-decay_counter = 0
-
 # NO EXPLORATION (comment or uncomment these two lines)
 # grid_map = backup_map.copy()
 # exploring = False
@@ -128,17 +125,12 @@ while robot.step(TIME_STEP) != -1:
         init_map = False
 
     grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
-
-    decay_counter += 1
-    if decay_counter >= DECAY_INTERVAL:
-        grid_map = decay_obstacles(grid_map, obstacle_map)
-        decay_counter = 0
     
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
 
     # 4. Inflate obstacles
-    grid_map = inflate_obstacles(grid_map)
+    grid_map = inflate_obstacles(grid_map, frontiers)
 
     # === HANDLE MANUAL POSITION FIRST ===
     if MANUAL_POSITION is not None and not path:

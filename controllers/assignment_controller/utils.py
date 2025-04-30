@@ -8,7 +8,7 @@ import io
 import base64
 import warnings
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, FREE, INFLATED, UNKNOWN, OBSTACLE
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, FREE, UNKNOWN, OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
 
 from SLAM.mapping import world_to_map, map_to_world
 
@@ -16,13 +16,14 @@ from SLAM.mapping import world_to_map, map_to_world
 def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     img = np.zeros((MAP_SIZE_X, MAP_SIZE_Y, 3), dtype=np.uint8)
 
-    img[grid_map == INFLATED] = [255, 165, 0]     # Inflated = orange
-    img[grid_map == OBSTACLE] = [0, 0, 0]         # Obstacles = black
     img[grid_map == UNKNOWN] = [100, 100, 100]    # Unknown = gray
     img[grid_map == FREE] = [255, 255, 255]    # Free = white
+    img[grid_map == OBSTACLE] = [0, 0, 0]         # Obstacles = black
+    img[grid_map == INFLATED_ZONE1] = [255, 165, 0]     # Inflated zone 1 = orange
+    img[grid_map == INFLATED_ZONE2] = [255, 255, 102]     # Inflated zone 2 = yellow
     img[occupancy_map == 1] = [102, 102, 255]    # Corridor occupied by robot 1 == blue
     img[occupancy_map == 2] = [255, 102, 102]    # Corridor occupied by robot 2 == red 
-    img[occupancy_map == 3] = [255, 255, 102]    # Corridor occupied by robot 3 == yellow 
+    img[occupancy_map == 3] = [255, 0, 255]    # Corridor occupied by robot 3 == pink 
 
     # Frontiers = red
     if frontiers:
@@ -74,14 +75,15 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
         Patch(facecolor=(100/255, 100/255, 100/255), label='Unknown'),
         Patch(facecolor='white', label='Free', edgecolor='black'),
         Patch(facecolor='black', label='Obstacle'),
-        Patch(facecolor=(255/255, 165/255, 0/255), label='Inflated obstacle'),
+        Patch(facecolor=(255/255, 165/255, 0/255), label='Inflated zone 1'),
+        Patch(facecolor=(255/255, 255/255, 102/255), label='Inflated zone 2'),
         Patch(facecolor=(255/255, 0, 0), label='Frontier'),
         Patch(facecolor=(0, 255/255, 255/255), label='Robot Position'),
         Patch(facecolor=(128/255, 0, 128/255), label='Path'),
         Patch(facecolor=(0, 255/255, 0), label='Target'),
         Patch(facecolor=(102/255, 102/255, 255/255), label='Robot 1 Corridor'),
         Patch(facecolor=(255/255, 102/255, 102/255), label='Robot 2 Corridor'),
-        Patch(facecolor=(255/255, 255/255, 102/255), label='Robot 3 Corridor'),
+        Patch(facecolor=(255/255, 0/255, 255/255), label='Robot 3 Corridor'),
     ]
 
     plt.legend(handles=legend_elements,

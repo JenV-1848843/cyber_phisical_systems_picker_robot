@@ -2,7 +2,7 @@ import math
 import numpy as np
 from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -93,7 +93,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
             occupancy_map[x][y] = robot_id
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
-    lidar_noise = 10 if init_map else 100 #  Reduce lidar range to 180° after initialization
+    lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
 
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
@@ -128,7 +128,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
             if hit_obstacle and j == len(line) - 1:
                 # Last point -> increase score of being an obstacle
                 val = int(obstacle_map[x][y]) + 3
-                val = min(val, 5000)
+                val = min(val, 255)
                 obstacle_map[x][y] = val
 
                 if obstacle_map[x][y] >= OBSTACLE_THRESHOLD:
@@ -146,33 +146,33 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
 # Function to inflate obstacles in the map
 # A mask is used to increase speed in stead of for loops
-def inflate_obstacles(grid_map):
+def inflate_obstacles(grid_map, frontiers):
     inflated_map = np.copy(grid_map)
 
-    # Zet eerst alle INFLATED cellen terug naar FREE
-    inflated_map[inflated_map == INFLATED] = FREE
+    # Create a mask for the obstacles
+    obstacle_mask = (grid_map == OBSTACLE).astype(np.uint8)
 
-    # Maak een binair masker van obstakels
-    obstacle_mask = (inflated_map == OBSTACLE).astype(np.uint8)
+    # Create a mask and safe zone for the frontiers -> otherwise frontiers will be overwritten
+    protection_mask = np.zeros_like(grid_map, dtype=bool)
+    for fx, fy in frontiers:
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                nx, ny = fx + dx, fy + dy
+                if 0 <= nx < grid_map.shape[0] and 0 <= ny < grid_map.shape[1]:
+                    protection_mask[nx, ny] = True
 
-    # Gebruik grey_dilation om het obstakelmasker uit te breiden
-    structure = np.ones((2 * SAFETY_RADIUS + 1, 2 * SAFETY_RADIUS + 1), dtype=np.uint8)
-    inflated_mask = grey_dilation(obstacle_mask, footprint=structure)
+    # INFLATED ZONE 1
+    structure1 = np.ones((3, 3), dtype=np.uint8)
+    inflated_mask1 = grey_dilation(obstacle_mask, footprint=structure1)
 
-    # Pas de inflatie toe, maar overschrijf geen OBSTACLE
-    inflated_map[(inflated_mask == 1) & (inflated_map != OBSTACLE)] = INFLATED
+    mask1 = (inflated_mask1 == 1) & (inflated_map == FREE) & (~protection_mask)
+    inflated_map[mask1] = INFLATED_ZONE1
+
+    # INFLATED ZONE 2
+    structure2 = np.ones((5, 5), dtype=np.uint8)
+    inflated_mask2 = grey_dilation(obstacle_mask, footprint=structure2)
+
+    mask2 = (inflated_mask2 == 1) & (inflated_map == FREE) & (~protection_mask)
+    inflated_map[mask2] = INFLATED_ZONE2
 
     return inflated_map
-
-def decay_obstacles(grid_map, obstacle_map):
-    # Verlaag alle waarden, maar niet onder 0
-    decayed_map = np.maximum(obstacle_map - 1, 0)
-
-    # Markeer posities waar de waarde kleiner is dan OBSTACLE_THRESHOLD
-    mask = decayed_map < OBSTACLE_THRESHOLD
-
-    # Zet die posities op 1 in obstacle_map
-    grid_map[mask & (grid_map == -1)] = 1
-
-    return grid_map
-

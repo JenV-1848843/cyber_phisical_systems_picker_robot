@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.18490862921249976 0.8797672920312448 0.43797067335012807 0.8948658743304263
-  position -8.410911459523017 -4.128105281239391 9.551744107770867
+  orientation 0.010331167903890624 0.9994629447502064 -0.031098055260535943 0.6418047542817877
+  position -13.449248337889074 -0.4931328758972795 11.27501110551329
   follow "Robot 1"
   followType "Pan and Tilt Shot"
 }
@@ -36,7 +36,19 @@ TurtleBot3Burger {
   translation -1.5 1 0.000499
   rotation 0 0 1 0
   name "Robot 2"
-  controller "assignment_controller"
+  controller "<none>"
+  extensionSlot [
+    GPS {
+    }
+    RobotisLds01 {
+    }
+  ]
+}
+TurtleBot3Burger {
+  translation -1.5 -1 0.000499
+  rotation 0 0 1 0
+  name "Robot 3"
+  controller "<none>"
   extensionSlot [
     GPS {
     }
