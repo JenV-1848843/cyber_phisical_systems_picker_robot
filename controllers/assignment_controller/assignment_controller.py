@@ -136,10 +136,12 @@ start_async_task_queue_listener(task_callback_wrapper)
 # Main loop
 while robot.step(TIME_STEP) != -1:
 
-    if MANUAL_POSITION is None:
+    if MANUAL_POSITION is None and ready_to_accept_task == False:
         with ready_to_accept_task_lock:
             ready_to_accept_task = True
-    elif task_queue.qsize() > 0:
+
+    if MANUAL_POSITION is None and task_queue.qsize() > 0:
+        print(task_queue.get())
         MANUAL_POSITION = task_queue.get()
 
     print(f"manual pos : {MANUAL_POSITION}")
