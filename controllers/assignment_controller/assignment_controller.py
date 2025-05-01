@@ -16,14 +16,14 @@ import queue
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, OBSTACLE, backup_map
 
 # Custom modules
-from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
+from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world, get_corridor_id
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from task_queue.taskqueuecontroller import on_task_received, start_async_task_queue_listener, print_task_on_task_received
 from frontiers import find_frontier
 from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
-from communication.sockets import connect_to_server, send_status_update, send_map_update, send_map_data, register_map_update_callback
+from communication.sockets import connect_to_server, corridor_update_callback, send_corridor_update, send_status_update, send_map_update, send_map_data, register_map_update_callback
 
 # ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
@@ -62,6 +62,8 @@ grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
 occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 
+ROBOT_CORRIDORS_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
+
 # ──────────────────────────────────────────────────────────────
 # SOCKETIO FOR ROBOT UPDATES
 # ──────────────────────────────────────────────────────────────
@@ -80,8 +82,15 @@ def handle_map_update(received_grid, received_obstacle, robot_id):
 
     map_received = True  # Set the flag to signal that the map has been received
 
+
+def handle_corridor_update(data):
+    global ROBOT_CORRIDORS_IDS
+    print(f"[Controller] New corridor status received: {data}.")
+    ROBOT_CORRIDORS_IDS = data
+
 connect_to_server()
 register_map_update_callback(handle_map_update)
+corridor_update_callback(handle_corridor_update)
 
 # ──────────────────────────────────────────────────────────────
 # FUNCTIONS FOR CONCURRENCY
@@ -163,6 +172,8 @@ pick_counter = 0
 FRONTIERS_INTERVAL = 5  # Interval for finding frontiers
 frontiers_counter = FRONTIERS_INTERVAL
 
+in_corridor = False
+
 # === NO EXPLORATION (comment or uncomment these two lines) ===
 # grid_map = backup_map.copy()
 # exploring = False
@@ -192,22 +203,34 @@ while robot.step(TIME_STEP) != -1:
         print(task_queue.get())
         MANUAL_POSITION = task_queue.get()
 
-    print(f"manual pos : {MANUAL_POSITION}")
-    print(f"Task queue: {task_queue.qsize()}")
+    # print(f"manual pos : {MANUAL_POSITION}")
+    # print(f"Task queue: {task_queue.qsize()}")
 
 
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, alpha=0.0)
 
+    robot_position = world_to_map(pose[0], pose[1])
+
+    corridor_id = get_corridor_id(pose)
+    if corridor_id:
+        if not in_corridor:
+            ROBOT_CORRIDORS_IDS[ROBOT_NAME] = corridor_id
+            send_corridor_update(ROBOT_CORRIDORS_IDS)
+            in_corridor = True
+    elif in_corridor:
+        ROBOT_CORRIDORS_IDS[ROBOT_NAME] = None
+        send_corridor_update(ROBOT_CORRIDORS_IDS)
+        in_corridor = False
+
     # 2. Update the map with lidar data
-    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
+    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, ROBOT_CORRIDORS_IDS, init_map)
 
     
     if init_map:
         init_map = False
     # 3. Determine current robot position
-    robot_position = world_to_map(pose[0], pose[1])
 
     # 4. Inflate obstacles
     grid_map = inflate_obstacles(grid_map, frontiers)
@@ -228,7 +251,7 @@ while robot.step(TIME_STEP) != -1:
             frontiers = find_frontier(grid_map)
             frontiers_counter = 0
 
-        if not frontiers or robot.getTime() > 60:
+        if not frontiers or robot.getTime() > 900:
             print("Stopping exploration — no frontiers found.")
             exploring = False
             current_target = None

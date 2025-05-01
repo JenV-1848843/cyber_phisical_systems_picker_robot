@@ -31,7 +31,7 @@ rabbitmq_queue = 'task_queue'
 # Robot initialization settings
 ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
 ROBOT_START_POSES = {"Robot 1": [-2.2, 1.4, 0.0], "Robot 2": [-2.2, 1.7, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
-ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": False, "Robot 3": False}
+ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": False, "Robot 3": True}
 status_dict = {}
 map_dict = {}
 ROBOT_CORRIDOR_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
@@ -67,7 +67,7 @@ def handle_status_update(data):
         status_dict[robot_id] = data
         corridor_id = data.get('position').get('corridor_id')
         ROBOT_CORRIDOR_IDS[robot_id] = corridor_id
-        emit('corridorstatus', ROBOT_CORRIDOR_IDS)
+        # emit('corridorstatus', ROBOT_CORRIDOR_IDS)
 
 # SocketIO event handlers for receiving map updates from robots
 @socketio.on('map_update')
@@ -109,6 +109,14 @@ def handle_map_data(data):
     for sid, socket in socketio.server.manager.rooms['/'].items():
         if sid != sender_sid:
             socketio.emit("map_data", data, room=sid)
+
+@socketio.on('corridorstatus')
+def handle_corridor_status(data):
+    sender_sid = request.sid
+
+    for sid, socket in socketio.server.manager.rooms['/'].items():
+        if sid != sender_sid:
+            socketio.emit("corridorstatus", data, room=sid)
 
 
 # ──────────────────────────────────────────────────────────────

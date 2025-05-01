@@ -4,6 +4,15 @@ from scipy.ndimage import grey_dilation
 
 from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
 
+def convert_name_to_id(name):
+    if name == "Robot 1":
+        return 1
+    elif name == "Robot 2":
+        return 2
+    elif name == "Robot 3":
+        return 3
+    else:
+        raise ValueError(f"Unknown robot name: {name}")
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -111,21 +120,32 @@ def get_corridor_id(pose):
     return corridorID
 
 # Update the map based on lidar readings and occupied corridors
-def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
+def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, robot_corridor_ids, init_map):
     '''
     Update occupancy and obstacle grid maps based on LIDAR data and robot corridor occupancy.
     '''
     # === CORRIDOR LOGICA ===
     occupancy_map.fill(0)  # sneller dan np.zeros opnieuw aanmaken
 
+    for key, val in robot_corridor_ids.items():
+        if val is not None:
+            robot_id = convert_name_to_id(key)
+            corridorCells = get_corridor_cells(pose, val)
+
+            if corridorCells:
+                for x, y in corridorCells:
+                    occupancy_map[x][y] = robot_id
+
+
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
 
-    for key, val in ROBOT_CORRIDOR_IDS.items():
-        corridorCells = get_corridor_cells(pose, val)
-        if corridorCells:
-            for x, y in corridorCells:
-                occupancy_map[x][y] = key
+    # for key, val in config.ROBOT_CORRIDOR_IDS.items():
+    #     corridorCells = get_corridor_cells(pose, val)
+    #     print("corridorCells", corridorCells)
+    #     if corridorCells:
+    #         for x, y in corridorCells:
+    #             occupancy_map[x][y] = key
 
     # === LIDAR Setup ===
     lidar_noise = 10 if init_map else 80
@@ -141,7 +161,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
     angle_step = fov / res
-    max_range = 1.0
+    max_range = 2.5
     range_len = len(ranges)
 
     # === Gebruik lokale variabelen voor herhaalde toegang
