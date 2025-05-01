@@ -16,7 +16,7 @@ import queue
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, OBSTACLE, backup_map
 
 # Custom modules
-from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world, get_corridor_id
+from SLAM.mapping import inflate_obstacles, update_map, update_occupancy_map, world_to_map, map_to_world, get_corridor_id
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from task_queue.taskqueuecontroller import on_task_received, start_async_task_queue_listener, print_task_on_task_received
@@ -47,10 +47,10 @@ lidar.enablePointCloud()
 gyro = robot.getDevice("gyro")
 gyro.enable(TIME_STEP)
 
-
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, ROBOT_ID, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_IDS, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+ROBOT_ID = ROBOT_IDS[ROBOT_NAME]  # Get the robot ID from the dictionary
 
 # Check if the robot was initialized successfully
 if not initialized:
@@ -62,13 +62,13 @@ grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
 occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 
-ROBOT_CORRIDORS_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
+robot_corridor_ids = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
 
 # ──────────────────────────────────────────────────────────────
 # SOCKETIO FOR ROBOT UPDATES
 # ──────────────────────────────────────────────────────────────
 
-# Threading event to signal when the map is received from another robot
+# Flag to signal when the map is received from another robot
 map_received = False
 
 # Function to handle map updates from other robots
@@ -82,11 +82,15 @@ def handle_map_update(received_grid, received_obstacle, robot_id):
 
     map_received = True  # Set the flag to signal that the map has been received
 
+# Flag to signal when the corridor update is received
+corridor_update_received = False
 
 def handle_corridor_update(data):
-    global ROBOT_CORRIDORS_IDS
+    global robot_corridor_ids, corridor_update_received
     print(f"[Controller] New corridor status received: {data}.")
-    ROBOT_CORRIDORS_IDS = data
+    robot_corridor_ids = data
+
+    corridor_update_received = True  # Set the flag to signal that the corridor update has been received
 
 connect_to_server()
 register_map_update_callback(handle_map_update)
@@ -194,6 +198,11 @@ while robot.step(TIME_STEP) != -1:
             active = True
         else:
             continue
+    
+    # Check if a corridor update is received
+    if corridor_update_received:
+        occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
+        corridor_update_received = False
 
     if MANUAL_POSITION is None and ready_to_accept_task == False:
         with ready_to_accept_task_lock:
@@ -211,28 +220,31 @@ while robot.step(TIME_STEP) != -1:
     pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, alpha=0.0)
 
+    # 2. Get robot position in map coordinates
     robot_position = world_to_map(pose[0], pose[1])
 
+    # 3. Check if the robot is in a corridor
     corridor_id = get_corridor_id(pose)
-    if corridor_id:
-        if not in_corridor:
-            ROBOT_CORRIDORS_IDS[ROBOT_NAME] = corridor_id
-            send_corridor_update(ROBOT_CORRIDORS_IDS)
+    if corridor_id: # If true the robot is in a corridor
+        if not in_corridor: # If the robot just entered a corridor
+            robot_corridor_ids[ROBOT_NAME] = corridor_id
+            send_corridor_update(robot_corridor_ids)
+            occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
             in_corridor = True
-    elif in_corridor:
-        ROBOT_CORRIDORS_IDS[ROBOT_NAME] = None
-        send_corridor_update(ROBOT_CORRIDORS_IDS)
+    
+    elif in_corridor: # If the robot just left a corridor
+        robot_corridor_ids[ROBOT_NAME] = None
+        send_corridor_update(robot_corridor_ids)
+        occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
         in_corridor = False
 
-    # 2. Update the map with lidar data
-    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, ROBOT_CORRIDORS_IDS, init_map)
+    # 4. Update the map with lidar data
+    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, init_map)
 
-    
     if init_map:
         init_map = False
-    # 3. Determine current robot position
 
-    # 4. Inflate obstacles
+    # 5. Inflate obstacles
     grid_map = inflate_obstacles(grid_map, frontiers)
 
     # === HANDLE MANUAL POSITION FIRST ===

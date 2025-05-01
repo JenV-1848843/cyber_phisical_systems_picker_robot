@@ -68,21 +68,23 @@ def on_map_data(data):
     except Exception as e:
         print(f"Error while processing map data: {e}")
 
+# Send corridor updates to the server
 def send_corridor_update(robot_corridor_ids):
     try:
-        sio.emit("corridorstatus", robot_corridor_ids)
+        sio.emit("corridor_update", robot_corridor_ids)
     except Exception as e:
         print(f"Error while sending corridor update: {e}")
 
+# Register a callback function to handle corridor updates from other robots
 corridor_update_callback = None
 def corridor_update_callback(callback):
     global corridor_update_callback
     corridor_update_callback = callback
 
-@sio.on("corridorstatus")
+# Handle incoming corridor updates from other robots
+@sio.on("corridor_update")
 def on_corridor_status(data):
     try:
-        ROBOT_CORRIDOR_IDS = data
         if corridor_update_callback:
             corridor_update_callback(data)
         else:

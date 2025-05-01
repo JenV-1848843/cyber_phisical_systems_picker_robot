@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation -0.3331956187059883 0.4703939095109633 0.8171353924351369 1.4283898964323511
-  position -2.3698574281459184 -3.6969589049897102 5.362415074686553
+  orientation -0.2485678019952436 0.4181777921481424 0.8736941009102432 1.1948150139155649
+  position -3.6661962840088025 -10.143400552933281 7.184373450823632
   followType "Pan and Tilt Shot"
 }
 TexturedBackground {
@@ -20,21 +20,7 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  hidden rotation_9 0 -1 0 1.5707960000900352
-  translation -2.1999995114679844 1.6999999902474343 -0.000565765749698674
-  rotation -0.0020985910466449265 -0.9999977979007125 1.0456797399039994e-05 0.00932197262783829
-  name "Robot 2"
-  controller "<none>"
-  extensionSlot [
-    GPS {
-    }
-    RobotisLds01 {
-    }
-  ]
-}
-TurtleBot3Burger {
-  translation -2.2 1.4 0.00049999
-  rotation -0.0020985910466449265 -0.9999977979007125 1.0456797399039994e-05 0.00932197262783829
+  translation -2.2 1.2 0.000499
   name "Robot 1"
   controller "assignment_controller"
   extensionSlot [
@@ -45,9 +31,18 @@ TurtleBot3Burger {
   ]
 }
 TurtleBot3Burger {
-  hidden rotation_9 0 -1 0 1.570796000090021
-  translation -2.199999511467984 1.9999999902474346 -0.0005657657496987295
-  rotation -0.0020985910466561663 -0.9999977979007125 1.0456797370877623e-05 0.009321972627841305
+  translation -2.1 1.6 0.0004999
+  name "Robot 2"
+  controller "assignment_controller"
+  extensionSlot [
+    GPS {
+    }
+    RobotisLds01 {
+    }
+  ]
+}
+TurtleBot3Burger {
+  translation -2 2 0.0004999
   name "Robot 3"
   controller "assignment_controller"
   extensionSlot [
