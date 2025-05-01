@@ -30,10 +30,11 @@ rabbitmq_queue = 'task_queue'
 
 # Robot initialization settings
 ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
-ROBOT_START_POSES = {"Robot 1": [-1.5, 0.0, 0.0], "Robot 2": [-1.5, 1.0, 0], "Robot 3": [-1.5, -1.0, 0]}  # [x, y, theta]
+ROBOT_START_POSES = {"Robot 1": [-2.2, 1.4, 0.0], "Robot 2": [-2.2, 1.7, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
+ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": False, "Robot 3": False}
 status_dict = {}
 map_dict = {}
-ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
+ROBOT_CORRIDOR_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
 robot_index = 0
 
 lock = threading.Lock()
@@ -48,7 +49,8 @@ def initialize_robot(name):
         if name in ROBOT_IDS and name in ROBOT_START_POSES:
             return jsonify({
                 "robot_id": ROBOT_IDS[name],
-                "start_pose": ROBOT_START_POSES[name]
+                "start_pose": ROBOT_START_POSES[name],
+                "active": ROBOT_ACTIVE[name]
             }), 200
         else:
             return jsonify({"error": f"Robot not found with name '{name}'"}), 404
@@ -57,24 +59,25 @@ def initialize_robot(name):
 # SOCKETIO FOR ROBOT UPDATES
 # ──────────────────────────────────────────────────────────────
 
+# SocketIO event handlers for receiving status updates from robots
 @socketio.on('status_update')
 def handle_status_update(data):
     with lock:
         robot_id = data.get('robot_id')
-        # print(f"Received status update from robot {robot_id}: {data}")
         status_dict[robot_id] = data
         corridor_id = data.get('position').get('corridor_id')
         ROBOT_CORRIDOR_IDS[robot_id] = corridor_id
         emit('corridorstatus', ROBOT_CORRIDOR_IDS)
 
+# SocketIO event handlers for receiving map updates from robots
 @socketio.on('map_update')
 def handle_map_update(data):
     with lock:
         robot_id = data.get('robot_id')
         map_img = data.get('map_img')
-        # print(f"Received map update from robot {robot_id}: {map_img}")
         map_dict[robot_id] = map_img
 
+# Function to send robot updates to the web client
 @app.route('/stream')
 def stream():
     def event_stream():
@@ -93,9 +96,20 @@ def stream():
                     last_sent = merged_data.copy()
                     yield f"data: {json.dumps(merged_data)}\n\n"
 
-            time.sleep(0.5)
+            time.sleep(0.2)
 
     return Response(event_stream(), mimetype='text/event-stream')
+
+# SocketIO event handler for receiving map data from robots
+@socketio.on('map_data')
+def handle_map_data(data):
+    sender_sid = request.sid
+
+    # Broadcast the map data to all connected clients except the sender
+    for sid, socket in socketio.server.manager.rooms['/'].items():
+        if sid != sender_sid:
+            socketio.emit("map_data", data, room=sid)
+
 
 # ──────────────────────────────────────────────────────────────
 # CONNECTION TO RABBITMQ
