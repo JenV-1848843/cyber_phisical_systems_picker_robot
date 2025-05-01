@@ -80,6 +80,7 @@ def background_logger(interval):
             
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
             send_map_update(map_img, ROBOT_NAME)
+            
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -102,6 +103,7 @@ exploring = True         # Flag to indicate if the robot is exploring
 
 # === Target position ===
 MANUAL_POSITION = None  # Set to None for automatic exploration
+# DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
 pick_counter = 0
 

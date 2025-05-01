@@ -33,6 +33,9 @@ ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
 ROBOT_START_POSES = {"Robot 1": [-1.5, 0.0, 0.0], "Robot 2": [-1.5, 1.0, 0], "Robot 3": [-1.5, -1.0, 0]}  # [x, y, theta]
 status_dict = {}
 map_dict = {}
+ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
+robot_index = 0
+
 lock = threading.Lock()
 
 # ──────────────────────────────────────────────────────────────
@@ -60,6 +63,9 @@ def handle_status_update(data):
         robot_id = data.get('robot_id')
         # print(f"Received status update from robot {robot_id}: {data}")
         status_dict[robot_id] = data
+        corridor_id = data.get('position').get('corridor_id')
+        ROBOT_CORRIDOR_IDS[robot_id] = corridor_id
+        emit('corridorstatus', ROBOT_CORRIDOR_IDS)
 
 @socketio.on('map_update')
 def handle_map_update(data):

@@ -21,6 +21,7 @@ WHEEL_BASE = 0.160
 MAX_SPEED = 6.28
 SAFETY_RADIUS = 1  # radius of cells to inflate around obstacles
 OBSTACLE_THRESHOLD = 20  # Amont of times a cell needs to be occupied to be considered an obstacle
+ROBOT_CORRIDOR_IDS = {1: None, 2: None}
 
 # SERVER CONFIGURATION
 SERVER_URL = "http://localhost:5000"  # Flask server

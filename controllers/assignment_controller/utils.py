@@ -10,7 +10,7 @@ import warnings
 
 from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, FREE, UNKNOWN, OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
 
-from SLAM.mapping import world_to_map, map_to_world
+from SLAM.mapping import world_to_map, map_to_world, get_corridor_id 
 
 # Function to plot the grid map
 def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
@@ -124,11 +124,14 @@ def create_status_update(name, pose, path, frontiers, current_target, end_target
     else:
         status_msg = "unknown"
 
+    corridorID = get_corridor_id(pose)
+
     status_update = {
         "robot_id": name,
         "position": {
             "world": {"x": round(pose[0], 2), "y": round(pose[1], 2), "theta": round(theta_in_degrees, 2)},
-            "map": {"x": mx, "y": my}
+            "map": {"x": mx, "y": my},
+            "corridor_id": corridorID
         },
         "frontiers_count": len(frontiers),
         "path_length": len(path) if path else 0,
