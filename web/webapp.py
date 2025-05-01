@@ -30,7 +30,7 @@ rabbitmq_queue = 'task_queue'
 
 # Robot initialization settings
 ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
-ROBOT_START_POSES = {"Robot 1": [-1.5, 0.0, 0.0], "Robot 2": [-1.5, 1.0, 0], "Robot 3": [-1.5, -1.0, 0]}  # [x, y, theta]
+ROBOT_START_POSES = {"Robot 1": [-2.2, 1.4, 0.0], "Robot 2": [-2.2, 1.7, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
 status_dict = {}
 map_dict = {}
 lock = threading.Lock()

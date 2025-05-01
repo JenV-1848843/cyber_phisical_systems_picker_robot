@@ -11,8 +11,8 @@ WorldInfo {
   basicTimeStep 64
 }
 Viewpoint {
-  orientation 0.010331167903890624 0.9994629447502064 -0.031098055260535943 0.6418047542817877
-  position -13.449248337889074 -0.4931328758972795 11.27501110551329
+  orientation 0.3407019077568406 -0.4576497878341717 -0.8212666325537565 4.810420441034498
+  position -3.3462009155795664 -9.25995330634639 10.232399821663538
   follow "Robot 1"
   followType "Pan and Tilt Shot"
 }
@@ -21,7 +21,7 @@ TexturedBackground {
 TexturedBackgroundLight {
 }
 TurtleBot3Burger {
-  translation -1.5 0 -0.000494379
+  translation -2.2 1.4 -0.000494379
   rotation 0 0 1 0
   name "Robot 1"
   controller "assignment_controller"
@@ -33,7 +33,7 @@ TurtleBot3Burger {
   ]
 }
 TurtleBot3Burger {
-  translation -1.5 1 0.000499
+  translation -2.2 1.7 0.000499
   rotation 0 0 1 0
   name "Robot 2"
   controller "<none>"
@@ -45,7 +45,7 @@ TurtleBot3Burger {
   ]
 }
 TurtleBot3Burger {
-  translation -1.5 -1 0.000499
+  translation -2.2 2 0.000499
   rotation 0 0 1 0
   name "Robot 3"
   controller "<none>"

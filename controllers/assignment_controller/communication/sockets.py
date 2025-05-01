@@ -19,7 +19,6 @@ def connect_to_server():
 def send_status_update(status_update):
     try:
         sio.emit("status_update", status_update)
-        # print(f"📤 Status verzonden: {status_update}")
     except Exception as e:
         print(f"Fout bij verzenden status update: {e}")
 
