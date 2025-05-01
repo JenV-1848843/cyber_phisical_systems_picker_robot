@@ -60,10 +60,19 @@ def start_async_task_queue_listener(callback_function):
 
 
 
-def on_task_received(ch, method, properties, body, task_queue):
+def on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock):
+    time.sleep(5)
+
     print(f"Received a task. queue size: {task_queue.qsize()}")
 
     try:
+
+        with ready_to_accept_task_lock:
+            if not ready_to_accept_task:
+                print("Robot is not accepting tasks right now. Rejecting task.")
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)  # Requeue if needed
+                return
+
         message = json.loads(body.decode('utf-8'))
         x_target = message.get('x_target')
         y_target = message.get('y_target')

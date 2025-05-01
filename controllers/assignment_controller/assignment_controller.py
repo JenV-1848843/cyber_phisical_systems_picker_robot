@@ -71,10 +71,8 @@ occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 # ──────────────────────────────────────────────────────────────
 
 def task_callback_wrapper(ch, method, properties, body):
-    global task_queue
-    on_task_received(ch, method, properties, body, task_queue)
-
-start_async_task_queue_listener(task_callback_wrapper)
+    global task_queue, ready_to_accept_task, ready_to_accept_task_lock
+    on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock)
 
 
 def background_logger(interval):
@@ -112,6 +110,10 @@ exploring = True         # Flag to indicate if the robot is exploring
 
 # === Target position ===
 task_queue = queue.Queue()
+
+ready_to_accept_task = False
+ready_to_accept_task_lock = threading.Lock()
+
 MANUAL_POSITION = None  # Set to None for automatic exploration
 # DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
@@ -125,6 +127,11 @@ pick_counter = 0
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.5,))
 logger_thread.start()
+
+
+# ____ Connect to task queue _____
+start_async_task_queue_listener(task_callback_wrapper)
+
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
