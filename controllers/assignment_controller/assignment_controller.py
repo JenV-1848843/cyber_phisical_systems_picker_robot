@@ -100,13 +100,13 @@ corridor_update_callback(handle_corridor_update)
 # FUNCTIONS FOR CONCURRENCY
 # ──────────────────────────────────────────────────────────────
 
+
+def task_callback_wrapper(ch, method, properties, body):
+    global task_queue, ready_to_accept_task, ready_to_accept_task_lock
+    on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock)
+
 # Function to send status updates and map images in the background
 # Runs in a separate thread
-
-# def task_callback_wrapper(ch, method, properties, body):
-#     global task_queue, ready_to_accept_task, ready_to_accept_task_lock
-#     on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock)
-
 def background_logger(interval):
     global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map, task_queue
 
@@ -155,7 +155,7 @@ init_map = True          # Flag to indicate if the map is being initialized
 exploring = True         # Flag to indicate if the robot is exploring  
 frontiers = []           # List of frontiers to explore
 
-current_target = None    # Target to drive to in WORLD coordinates
+current_target = None  # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
 path = []                # Planned path (list of MAP coordinates)
 
@@ -170,6 +170,7 @@ ready_to_accept_task_lock = threading.Lock()
 
 MANUAL_POSITION = None  # Set to None for automatic exploration
 # DEFAULT_POSITION = (5, 20)
+path_to_manual_position = False
 PICK_INTERVAL = 300
 pick_counter = 0
 
@@ -179,15 +180,15 @@ frontiers_counter = FRONTIERS_INTERVAL
 in_corridor = False
 
 # === NO EXPLORATION (comment or uncomment these two lines) ===
-# grid_map = backup_map.copy()
-# exploring = False
+grid_map = backup_map.copy()
+exploring = False
 
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
 logger_thread.start()
 
 # ____ Connect to task queue _____
-# start_async_task_queue_listener(task_callback_wrapper)
+start_async_task_queue_listener(task_callback_wrapper)
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
@@ -209,11 +210,12 @@ while robot.step(TIME_STEP) != -1:
             ready_to_accept_task = True
 
     if MANUAL_POSITION is None and task_queue.qsize() > 0:
-        print(task_queue.get())
-        MANUAL_POSITION = task_queue.get()
+        task = task_queue.get()
+        print(f"Task received: {task}")
+        MANUAL_POSITION = (task[0], task[1])
 
-    # print(f"manual pos : {MANUAL_POSITION}")
-    # print(f"Task queue: {task_queue.qsize()}")
+    print(f"manual pos : {MANUAL_POSITION}")
+    print(f"Task queue: {task_queue.qsize()}")
 
 
     # 1. Update the robot's pose using odometry and gyroscope
@@ -248,12 +250,15 @@ while robot.step(TIME_STEP) != -1:
     grid_map = inflate_obstacles(grid_map, frontiers)
 
     # === HANDLE MANUAL POSITION FIRST ===
-    if MANUAL_POSITION is not None and not path:
-        trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
-        if trial:
-            path = trial
-            end_target = path[-1]
-            current_target = map_to_world(path[0][0], path[0][1])
+    if MANUAL_POSITION is not None:
+        if not path_to_manual_position:
+            print(f"Planning path to manual position: {MANUAL_POSITION}")
+            trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
+            if trial:
+                path = trial
+                end_target = path[-1]
+                current_target = map_to_world(path[0][0], path[0][1])
+                path_to_manual_position = True
 
     # === EXPLORATION ===
     elif exploring:
@@ -315,6 +320,8 @@ while robot.step(TIME_STEP) != -1:
                 break
 
         if rerouting:
+            if MANUAL_POSITION is not None:
+                path_to_manual_position = False
             continue
 
         if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.10:
@@ -339,6 +346,7 @@ while robot.step(TIME_STEP) != -1:
                     end_target = path[-1]
                     current_target = map_to_world(path[0][0], path[0][1])
                 MANUAL_POSITION = None
+                path_to_manual_position = False
                 pick_counter = 0
         else:
             print("No target — stopping.")
