@@ -2,7 +2,8 @@ import math
 import numpy as np
 from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
+
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -112,62 +113,55 @@ def get_corridor_id(pose):
 # Update the map based on lidar readings and occupied corridors
 def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
     '''
-    # 1: define where in the map lie occupied corridors
+    Update occupancy and obstacle grid maps based on LIDAR data and robot corridor occupancy.
     '''
-    occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+    # === CORRIDOR LOGICA ===
+    occupancy_map.fill(0)  # sneller dan np.zeros opnieuw aanmaken
+
+    rx, ry, rtheta = pose
+    map_x, map_y = world_to_map(rx, ry)
 
     for key, val in ROBOT_CORRIDOR_IDS.items():
         corridorCells = get_corridor_cells(pose, val)
-
-    # FOR OCCUPANCY MAP TESTING
-    # if count <= 100:
-    # corridorCells = []
-
-    # for x in range(20, 50):
-    #     for y in range(3, 7):
-    #         corridorCells.append((x, y))
-    
-    # else:
-    #     corridorCells = []
-
-    # if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
-    #     occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
         if corridorCells:
-            for (x, y) in corridorCells:
+            for x, y in corridorCells:
                 occupancy_map[x][y] = key
 
-    print("---------------------")
-    print(occupancy_map[25][5])
-    print(occupancy_map[25][17])
-    print(occupancy_map[25][28])
-    print(occupancy_map[25][39])
-    print("---------------------")
+    # === LIDAR Setup ===
+    lidar_noise = 10 if init_map else 80
 
-    # 1: place obstacles or free space in the map based on lidar readings and further calculations
-    lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
+    # print("---------------------")
+    # print(occupancy_map[25][5])
+    # print(occupancy_map[25][17])
+    # print(occupancy_map[25][28])
+    # print(occupancy_map[25][39])
+    # print("---------------------")
 
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
     angle_step = fov / res
+    max_range = 1.0
+    range_len = len(ranges)
 
-    rx, ry, rtheta = pose
-    map_x, map_y = world_to_map(rx, ry)
-    max_range = 2.0  # LIDAR range cap
+    # === Gebruik lokale variabelen voor herhaalde toegang
+    start_idx = lidar_noise
+    end_idx = range_len - lidar_noise
+    cos = math.cos
+    sin = math.sin
 
-    for i, distance in enumerate(ranges):
-        if i < lidar_noise or i > len(ranges) - lidar_noise:
-            continue  # Reduce noise in the lidar data
-
+    for i in range(start_idx, end_idx):
+        distance = ranges[i]
         angle = rtheta + fov / 2 - i * angle_step
+
         if distance == float('inf') or distance > max_range:
             distance = max_range
             hit_obstacle = False
         else:
             hit_obstacle = True
 
-        end_x = rx + math.cos(angle) * distance
-        end_y = ry + math.sin(angle) * distance
+        end_x = rx + cos(angle) * distance
+        end_y = ry + sin(angle) * distance
         end_mx, end_my = world_to_map(end_x, end_y)
 
         line = bresenham(map_x, map_y, end_mx, end_my)
@@ -177,23 +171,19 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
                 break
 
             if hit_obstacle and j == len(line) - 1:
-                # Last point -> increase score of being an obstacle
-                val = int(obstacle_map[x][y]) + 3
-                val = min(val, 255)
-                obstacle_map[x][y] = val
-
+                val = obstacle_map[x][y] + 3
+                obstacle_map[x][y] = min(val, 255)
                 if obstacle_map[x][y] >= OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = OBSTACLE  # If the score is higher than threshold, mark as obstacle
+                    grid_map[x][y] = OBSTACLE
             else:
-                # Free space -> decrease score of being an obstacle
-                val = int(obstacle_map[x][y]) - 1
-                val = max(val, 0)
-                obstacle_map[x][y] = val
-
+                val = obstacle_map[x][y] - 1
+                obstacle_map[x][y] = max(val, 0)
                 if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = FREE  # If the score is lower than threshold, mark as free space
+                    grid_map[x][y] = FREE
 
     return grid_map, obstacle_map, occupancy_map
+
+
 
 # Function to inflate obstacles in the map
 # A mask is used to increase speed in stead of for loops

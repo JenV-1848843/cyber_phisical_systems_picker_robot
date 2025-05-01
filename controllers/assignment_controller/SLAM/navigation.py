@@ -53,6 +53,9 @@ def astar(start, goal, cost_map, occupancy_map, robot_id):
                 print(f"[astar] Exception bij optellen: {e}")
                 return []
             
+            if tentative > 1000:
+                return []
+            
             if tentative < g.get((nx, ny), float('inf')):
                 came_from[(nx, ny)] = current
                 g[(nx, ny)] = tentative
