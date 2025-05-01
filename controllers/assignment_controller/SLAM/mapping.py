@@ -73,21 +73,21 @@ def get_corridor_cells(pose, id=None):
         corridorCells = []
 
         if 20 <= rx <= 49:
-            if 3 <= ry <= 6:
+            if 3 <= ry <= 7:
                 for x in range(20, 50):
-                    for y in range(3, 7):
+                    for y in range(3, 8):
                         corridorCells.append((x, y))
-            elif 13 <= ry <= 16:
+            elif 14 <= ry <= 18:
                 for x in range(20, 50):
-                    for y in range(13, 17):
+                    for y in range(14, 19):
                         corridorCells.append((x, y))
-            elif 23 <= ry <= 26:
+            elif 25 <= ry <= 29:
                 for x in range(20, 50):
-                    for y in range(23, 27):
+                    for y in range(25, 30):
                         corridorCells.append((x, y))
-            elif 33 <= ry <= 36:
+            elif 36 <= ry <= 40:
                 for x in range(20, 50):
-                    for y in range(33, 37):
+                    for y in range(36, 41):
                         corridorCells.append((x, y))
 
     return corridorCells
@@ -98,13 +98,13 @@ def get_corridor_id(pose):
     corridorID = None
 
     if 20 <= rx <= 49:
-        if 3 <= ry <= 6:
+        if 3 <= ry <= 7:
             corridorID = 1
-        elif 13 <= ry <= 16:
+        elif 14 <= ry <= 18:
             corridorID = 2
-        elif 23 <= ry <= 26:
+        elif 25 <= ry <= 29:
             corridorID = 3
-        elif 33 <= ry <= 36:
+        elif 36 <= ry <= 40:
             corridorID = 4
 
     return corridorID
@@ -135,6 +135,13 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
         if corridorCells:
             for (x, y) in corridorCells:
                 occupancy_map[x][y] = key
+
+    print("---------------------")
+    print(occupancy_map[25][5])
+    print(occupancy_map[25][17])
+    print(occupancy_map[25][28])
+    print(occupancy_map[25][39])
+    print("---------------------")
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
