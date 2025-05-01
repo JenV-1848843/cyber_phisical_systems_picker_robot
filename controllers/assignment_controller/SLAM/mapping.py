@@ -2,7 +2,8 @@ import math
 import numpy as np
 from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
+
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -136,9 +137,8 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
             for (x, y) in corridorCells:
                 occupancy_map[x][y] = key
 
-    # 1: place obstacles or free space in the map based on lidar readings and further calculations
-    lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
-
+    # === LIDAR Setup ===
+    lidar_noise = 10 if init_map else 80
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
@@ -146,13 +146,17 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
-    max_range = 2.0  # LIDAR range cap
+    max_range = 1.0
+    range_len = len(ranges)
 
-    for i, distance in enumerate(ranges):
-        if i < lidar_noise or i > len(ranges) - lidar_noise:
-            continue  # Reduce noise in the lidar data
+    # === Snelle indexgrenzen vermijden herhaald rekenen ===
+    start_idx = lidar_noise
+    end_idx = range_len - lidar_noise
 
+    for i in range(start_idx, end_idx):
+        distance = ranges[i]
         angle = rtheta + fov / 2 - i * angle_step
+
         if distance == float('inf') or distance > max_range:
             distance = max_range
             hit_obstacle = False
@@ -165,28 +169,24 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
         line = bresenham(map_x, map_y, end_mx, end_my)
 
-        for j, (x, y) in enumerate(line):
+        for j in range(len(line)):
+            x, y = line[j]
             if not in_bounds(x, y):
                 break
 
             if hit_obstacle and j == len(line) - 1:
-                # Last point -> increase score of being an obstacle
-                val = int(obstacle_map[x][y]) + 3
-                val = min(val, 255)
-                obstacle_map[x][y] = val
-
+                val = obstacle_map[x][y] + 3
+                obstacle_map[x][y] = min(val, 255)
                 if obstacle_map[x][y] >= OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = OBSTACLE  # If the score is higher than threshold, mark as obstacle
+                    grid_map[x][y] = OBSTACLE
             else:
-                # Free space -> decrease score of being an obstacle
-                val = int(obstacle_map[x][y]) - 1
-                val = max(val, 0)
-                obstacle_map[x][y] = val
-
+                val = obstacle_map[x][y] - 1
+                obstacle_map[x][y] = max(val, 0)
                 if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
-                    grid_map[x][y] = FREE  # If the score is lower than threshold, mark as free space
+                    grid_map[x][y] = FREE
 
     return grid_map, obstacle_map, occupancy_map
+
 
 # Function to inflate obstacles in the map
 # A mask is used to increase speed in stead of for loops

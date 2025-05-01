@@ -13,10 +13,11 @@ def initiate_robot(robot_name):
         robot_id = response.json()["robot_id"] 
         pose = response.json()["start_pose"]
         home_cell = world_to_map(pose[0], pose[1])
-        print(f"Robot initialized: {robot_name} with pose {pose}")
-        return initialized, robot_id, pose, home_cell
+        active = response.json()["active"]
+        print(f"Robot initialized: {robot_name} with pose {pose} and is active = {active}")
+        return initialized, robot_id, pose, home_cell, active
     else:
         initialized = False
-        robot_id = pose = home_cell = None
+        robot_id = pose = home_cell = active = None
         print(f"Error initializing robot: {response.json()['error']}")
         return initialized, robot_id, pose, home_cell
