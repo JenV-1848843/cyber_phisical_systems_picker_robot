@@ -20,7 +20,7 @@ WHEEL_RADIUS = 0.033
 WHEEL_BASE = 0.160
 MAX_SPEED = 6.28
 OBSTACLE_THRESHOLD = 20  # Amont of times a cell needs to be occupied to be considered an obstacle
-ROBOT_CORRIDOR_IDS = {1: None, 2: None}
+ROBOT_CORRIDOR_IDS = {1: None, 2: None, 3: None}
 
 # SERVER CONFIGURATION
 SERVER_URL = "http://localhost:5000"  # Flask server

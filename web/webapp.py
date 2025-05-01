@@ -34,7 +34,7 @@ ROBOT_START_POSES = {"Robot 1": [-2.2, 1.4, 0.0], "Robot 2": [-2.2, 1.7, 0], "Ro
 ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": False, "Robot 3": False}
 status_dict = {}
 map_dict = {}
-ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
+ROBOT_CORRIDOR_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
 robot_index = 0
 
 lock = threading.Lock()
@@ -236,4 +236,4 @@ def validate_input(data):
 # ──────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)

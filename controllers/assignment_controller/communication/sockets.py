@@ -70,6 +70,7 @@ def on_map_data(data):
 
 @sio.on("corridorstatus")
 def get_status_update(data):
-    ROBOT_CORRIDOR_IDS[1] = data.get('Bobbie')
-    ROBOT_CORRIDOR_IDS[2] = data.get('Bubbie')
-    print(ROBOT_CORRIDOR_IDS)
+    ROBOT_CORRIDOR_IDS[1] = data.get('Robot 1')
+    ROBOT_CORRIDOR_IDS[2] = data.get('Robot 2')
+    ROBOT_CORRIDOR_IDS[3] = data.get('Robot 3')
+    # print(ROBOT_CORRIDOR_IDS)

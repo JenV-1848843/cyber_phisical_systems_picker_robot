@@ -109,7 +109,7 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     return base64.b64encode(buffer.read()).decode('utf-8')
 
 # Function to log status of the robot
-def create_status_update(name, pose, path, frontiers, current_target, end_target):
+def create_status_update(name, pose, path, frontiers, current_target, end_target, robot_id):
     mx, my = world_to_map(pose[0], pose[1])
     theta_in_degrees = math.degrees(pose[2] % (2 * math.pi))
     status_msg = ""
@@ -125,6 +125,7 @@ def create_status_update(name, pose, path, frontiers, current_target, end_target
         status_msg = "unknown"
 
     corridorID = get_corridor_id(pose)
+    # print(f"Robot {robot_id} registered itself in corridor {corridorID}")
 
     status_update = {
         "robot_id": name,
@@ -145,7 +146,7 @@ def create_status_update(name, pose, path, frontiers, current_target, end_target
             "world": {"x": round(map_to_world(end_target[0], end_target[1])[0], 2),
                       "y": round(map_to_world(end_target[0], end_target[1])[1], 2)},
             "map": {"x": end_target[0], "y": end_target[1]}
-        } if end_target else None
+        } if end_target else None,
     }
 
     return status_update
