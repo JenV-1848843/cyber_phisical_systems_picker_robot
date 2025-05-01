@@ -1,7 +1,8 @@
 import math
 import numpy as np
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE, ROBOT_CORRIDOR_IDS, PREV_CORRIDOR_ID
+import config
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -26,9 +27,9 @@ def in_bounds(mx, my):
     return 0 <= mx <= MAP_SIZE_X - 1 and 0 <= my <= MAP_SIZE_Y - 1
 
 # Bresenham's line algorithm to find points between two coordinates
-# x0, y0 = coordinates of the robot
+# x0, y0 = coordinates of the robot                
 # x1, y1 = end of lidar ray
-# Returns a list of points (x, y) between (x0, y0) and (x1, y1)
+# Returns a list of points(x, y) between (x0, y0) and (x1, y1)
 def bresenham(x0, y0, x1, y1):
     points, dx, dy = [], abs(x1 - x0), abs(y1 - y0)
     sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
@@ -42,37 +43,81 @@ def bresenham(x0, y0, x1, y1):
     return points
 
 # Function to get the cells of the corridor the robot's in
-def get_corridor_cells(pose):
-    rx, ry = world_to_map(pose[0], pose[1], MAP_WIDTH, MAP_HEIGHT, CELL_SIZE)
+def get_corridor_cells(pose, id=None):
+    if id:
+        corridorCells = []
 
-    corridorCells = []
-
-    if 20 <= rx <= 49:
-        if 3 <= ry <= 6:
+        if id == 1:
             for x in range(20, 50):
                 for y in range(3, 7):
                     corridorCells.append((x, y))
-        elif 13 <= ry <= 16:
+        elif id == 2:
             for x in range(20, 50):
                 for y in range(13, 17):
                     corridorCells.append((x, y))
-        elif 23 <= ry <= 26:
+        elif id == 3:
             for x in range(20, 50):
                 for y in range(23, 27):
                     corridorCells.append((x, y))
-        elif 33 <= ry <= 36:
+        elif id == 4:
             for x in range(20, 50):
                 for y in range(33, 37):
                     corridorCells.append((x, y))
+        else:
+            if id is not None:
+                print("no valid corridor ID passes to function get_corridor_cells()")
+
+    else:
+        rx, ry = world_to_map(pose[0], pose[1])
+
+        corridorCells = []
+
+        if 20 <= rx <= 49:
+            if 3 <= ry <= 6:
+                for x in range(20, 50):
+                    for y in range(3, 7):
+                        corridorCells.append((x, y))
+            elif 13 <= ry <= 16:
+                for x in range(20, 50):
+                    for y in range(13, 17):
+                        corridorCells.append((x, y))
+            elif 23 <= ry <= 26:
+                for x in range(20, 50):
+                    for y in range(23, 27):
+                        corridorCells.append((x, y))
+            elif 33 <= ry <= 36:
+                for x in range(20, 50):
+                    for y in range(33, 37):
+                        corridorCells.append((x, y))
 
     return corridorCells
+
+def get_corridor_id(pose):
+    rx, ry = world_to_map(pose[0], pose[1])
+
+    corridorID = None
+
+    if 20 <= rx <= 49:
+        if 3 <= ry <= 6:
+            corridorID = 1
+        elif 13 <= ry <= 16:
+            corridorID = 2
+        elif 23 <= ry <= 26:
+            corridorID = 3
+        elif 33 <= ry <= 36:
+            corridorID = 4
+
+    return corridorID
 
 # Update the map based on lidar readings and occupied corridors
 def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
     '''
-    # 2: define where in the map lie occupied corridors
+    # 1: define where in the map lie occupied corridors
     '''
-    corridorCells = get_corridor_cells(pose)
+    occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+
+    for key, val in ROBOT_CORRIDOR_IDS.items():
+        corridorCells = get_corridor_cells(pose, val)
 
     # FOR OCCUPANCY MAP TESTING
     # if count <= 100:
@@ -85,11 +130,16 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
     # else:
     #     corridorCells = []
 
-    if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
-        occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
-    else:
-        for (x, y) in corridorCells:
-            occupancy_map[x][y] = robot_id
+    # if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
+    #     occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+        if corridorCells:
+            for (x, y) in corridorCells:
+                occupancy_map[x][y] = key
+        # else:
+        #     if corridorID != config.PREV_CORRIDOR_ID and corridorID == 0:
+        #         corridorCells = get_corridor_cells(pose, config.PREV_CORRIDOR_ID)
+        #         for (x, y) in corridorCells:
+        #             occupancy_map[x][y] = 0
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
