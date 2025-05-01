@@ -197,11 +197,12 @@ while robot.step(TIME_STEP) != -1:
     # === EXPLORATION ===
     elif exploring:
         frontiers_counter += 1
+        
         if frontiers_counter > FRONTIERS_INTERVAL:
             frontiers = find_frontier(grid_map)
             frontiers_counter = 0
 
-        if not frontiers or robot.getTime() > 900:
+        if not frontiers or robot.getTime() > 60:
             print("Stopping exploration — no frontiers found.")
             exploring = False
             current_target = None

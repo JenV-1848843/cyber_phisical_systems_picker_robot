@@ -113,28 +113,18 @@ def get_corridor_id(pose):
 # Update the map based on lidar readings and occupied corridors
 def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
     '''
-    # 1: define where in the map lie occupied corridors
+    Update occupancy and obstacle grid maps based on LIDAR data and robot corridor occupancy.
     '''
-    occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+    # === CORRIDOR LOGICA ===
+    occupancy_map.fill(0)  # sneller dan np.zeros opnieuw aanmaken
+
+    rx, ry, rtheta = pose
+    map_x, map_y = world_to_map(rx, ry)
 
     for key, val in ROBOT_CORRIDOR_IDS.items():
         corridorCells = get_corridor_cells(pose, val)
-
-    # FOR OCCUPANCY MAP TESTING
-    # if count <= 100:
-    # corridorCells = []
-
-    # for x in range(20, 50):
-    #     for y in range(3, 7):
-    #         corridorCells.append((x, y))
-    
-    # else:
-    #     corridorCells = []
-
-    # if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
-    #     occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
         if corridorCells:
-            for (x, y) in corridorCells:
+            for x, y in corridorCells:
                 occupancy_map[x][y] = key
 
     # === LIDAR Setup ===
@@ -143,15 +133,14 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
     angle_step = fov / res
-
-    rx, ry, rtheta = pose
-    map_x, map_y = world_to_map(rx, ry)
     max_range = 1.0
     range_len = len(ranges)
 
-    # === Snelle indexgrenzen vermijden herhaald rekenen ===
+    # === Gebruik lokale variabelen voor herhaalde toegang
     start_idx = lidar_noise
     end_idx = range_len - lidar_noise
+    cos = math.cos
+    sin = math.sin
 
     for i in range(start_idx, end_idx):
         distance = ranges[i]
@@ -163,14 +152,13 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
         else:
             hit_obstacle = True
 
-        end_x = rx + math.cos(angle) * distance
-        end_y = ry + math.sin(angle) * distance
+        end_x = rx + cos(angle) * distance
+        end_y = ry + sin(angle) * distance
         end_mx, end_my = world_to_map(end_x, end_y)
 
         line = bresenham(map_x, map_y, end_mx, end_my)
 
-        for j in range(len(line)):
-            x, y = line[j]
+        for j, (x, y) in enumerate(line):
             if not in_bounds(x, y):
                 break
 
@@ -186,6 +174,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
                     grid_map[x][y] = FREE
 
     return grid_map, obstacle_map, occupancy_map
+
 
 
 # Function to inflate obstacles in the map
