@@ -60,8 +60,8 @@ def start_async_task_queue_listener(callback_function):
 
 
 
-def on_task_received(ch, method, properties, body, task_queue, MANUAL_POSITION):
-    print(f"Received a task. MANUAl_POSITION = {MANUAL_POSITION}")
+def on_task_received(ch, method, properties, body, task_queue):
+    print(f"Received a task. queue size: {task_queue.qsize()}")
 
     try:
         message = json.loads(body.decode('utf-8'))

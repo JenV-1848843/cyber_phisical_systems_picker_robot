@@ -71,8 +71,10 @@ occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 # ──────────────────────────────────────────────────────────────
 
 def task_callback_wrapper(ch, method, properties, body):
-    on_task_received(ch, method, properties, body, task_queue, MANUAL_POSITION)
+    global task_queue
+    on_task_received(ch, method, properties, body, task_queue)
 
+start_async_task_queue_listener(task_callback_wrapper)
 
 
 def background_logger(interval):
@@ -82,12 +84,12 @@ def background_logger(interval):
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target, task_queue)
+            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
-            
+
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
             send_map_update(map_img, ROBOT_NAME)
-            
+
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -126,6 +128,9 @@ logger_thread.start()
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
+
+    print(f"Task queue: {task_queue.qsize()}")
+
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, alpha=0.0)
