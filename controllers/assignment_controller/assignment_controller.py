@@ -184,7 +184,17 @@ while robot.step(TIME_STEP) != -1:
         else:
             continue
 
-    # print(f"Task queue: {task_queue.qsize()}")
+    if MANUAL_POSITION is None and ready_to_accept_task == False:
+        with ready_to_accept_task_lock:
+            ready_to_accept_task = True
+
+    if MANUAL_POSITION is None and task_queue.qsize() > 0:
+        print(task_queue.get())
+        MANUAL_POSITION = task_queue.get()
+
+    print(f"manual pos : {MANUAL_POSITION}")
+    print(f"Task queue: {task_queue.qsize()}")
+
 
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
@@ -192,10 +202,10 @@ while robot.step(TIME_STEP) != -1:
 
     # 2. Update the map with lidar data
     grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
+
     
     if init_map:
         init_map = False
-    
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
 
