@@ -9,6 +9,7 @@ import math
 import threading
 import time
 import concurrent.futures
+import queue
 
 # Config
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, backup_map
@@ -17,6 +18,7 @@ from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, backup_map
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
+from task_queue.taskqueuecontroller import on_task_received, start_async_task_queue_listener, print_task_on_task_received
 from frontiers import find_frontier
 from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
@@ -68,14 +70,19 @@ occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 # FUNCTIONS FOR CONCURRENCY
 # ──────────────────────────────────────────────────────────────
 
+def task_callback_wrapper(ch, method, properties, body):
+    on_task_received(ch, method, properties, body, task_queue, MANUAL_POSITION)
+
+
+
 def background_logger(interval):
-    global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map
+    global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map, task_queue
 
     while True:
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
+            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target, task_queue)
             send_status_update(status_update)
             
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
@@ -102,6 +109,7 @@ frontiers = []           # List of frontiers to explore
 exploring = True         # Flag to indicate if the robot is exploring  
 
 # === Target position ===
+task_queue = queue.Queue()
 MANUAL_POSITION = None  # Set to None for automatic exploration
 # DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
@@ -228,3 +236,4 @@ while robot.step(TIME_STEP) != -1:
         path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
         if path:
             current_target = map_to_world(path[0][0], path[0][1])
+

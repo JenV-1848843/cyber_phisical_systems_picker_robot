@@ -109,7 +109,7 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     return base64.b64encode(buffer.read()).decode('utf-8')
 
 # Function to log status of the robot
-def create_status_update(name, pose, path, frontiers, current_target, end_target):
+def create_status_update(name, pose, path, frontiers, current_target, end_target, task_queue):
     mx, my = world_to_map(pose[0], pose[1])
     theta_in_degrees = math.degrees(pose[2] % (2 * math.pi))
     status_msg = ""
