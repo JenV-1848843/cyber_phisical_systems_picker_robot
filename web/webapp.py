@@ -31,7 +31,7 @@ rabbitmq_queue = 'task_queue'
 # Robot initialization settings
 ROBOT_IDS = {"Bobbie": -10, "Bubbie": -11}
 ROBOT_START_POSES = {"Bobbie": [-1.5, 0.0, 0.0], "Bubbie": [-1.5, 1.0, 0]}  # [x, y, theta]
-ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": 3}
+ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
 robot_index = 0
 lock = threading.Lock()
 

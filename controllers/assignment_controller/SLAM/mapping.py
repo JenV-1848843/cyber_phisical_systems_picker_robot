@@ -1,7 +1,8 @@
 import math
 import numpy as np
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE, ROBOT_CORRIDOR_IDS
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE, ROBOT_CORRIDOR_IDS, PREV_CORRIDOR_ID
+import config
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -111,8 +112,10 @@ def get_corridor_id(pose):
 # Update the map based on lidar readings and occupied corridors
 def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
     '''
-    # 2: define where in the map lie occupied corridors
+    # 1: define where in the map lie occupied corridors
     '''
+    occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
+
     for key, val in ROBOT_CORRIDOR_IDS.items():
         corridorCells = get_corridor_cells(pose, val)
 
@@ -129,12 +132,14 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     # if not corridorCells: # if list of cells is empty --> if corridor isn't occupied
     #     occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
-        if val is None:
-            for (x, y) in corridorCells:
-                occupancy_map[x][y] = 0
-        else:
+        if corridorCells:
             for (x, y) in corridorCells:
                 occupancy_map[x][y] = key
+        # else:
+        #     if corridorID != config.PREV_CORRIDOR_ID and corridorID == 0:
+        #         corridorCells = get_corridor_cells(pose, config.PREV_CORRIDOR_ID)
+        #         for (x, y) in corridorCells:
+        #             occupancy_map[x][y] = 0
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
