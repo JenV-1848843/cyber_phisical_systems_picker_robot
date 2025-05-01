@@ -136,6 +136,13 @@ start_async_task_queue_listener(task_callback_wrapper)
 # Main loop
 while robot.step(TIME_STEP) != -1:
 
+    if MANUAL_POSITION is None:
+        with ready_to_accept_task_lock:
+            ready_to_accept_task = True
+    elif task_queue.qsize() > 0:
+        MANUAL_POSITION = task_queue.get()
+
+    print(f"manual pos : {MANUAL_POSITION}")
     print(f"Task queue: {task_queue.qsize()}")
 
     # 1. Update the robot's pose using odometry and gyroscope
@@ -147,7 +154,7 @@ while robot.step(TIME_STEP) != -1:
         init_map = False
 
     grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
-    
+
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
 
