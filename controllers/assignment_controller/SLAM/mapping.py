@@ -2,8 +2,7 @@ import math
 import numpy as np
 from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
-
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -110,25 +109,18 @@ def get_corridor_id(pose):
 
     return corridorID
 
-# Update the map based on lidar readings and occupied corridors
-def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
-    '''
-    Update occupancy and obstacle grid maps based on LIDAR data and robot corridor occupancy.
-    '''
-    # === CORRIDOR LOGICA ===
-    occupancy_map.fill(0)  # sneller dan np.zeros opnieuw aanmaken
+def update_occupancy_map(pose, occupancy_map, robot_corridor_ids, robot_ids):
+    # Clear the occupancy map
+    occupancy_map.fill(0)
 
-    rx, ry, rtheta = pose
-    map_x, map_y = world_to_map(rx, ry)
+    for key, val in robot_corridor_ids.items():
+        if val is not None:
+            robot_id = robot_ids[key]
+            corridorCells = get_corridor_cells(pose, val)
 
-    for key, val in ROBOT_CORRIDOR_IDS.items():
-        corridorCells = get_corridor_cells(pose, val)
-        if corridorCells:
-            for x, y in corridorCells:
-                occupancy_map[x][y] = key
-
-    # === LIDAR Setup ===
-    lidar_noise = 10 if init_map else 80
+            if corridorCells:
+                for x, y in corridorCells:
+                    occupancy_map[x, y] = robot_id
 
     # print("---------------------")
     # print(occupancy_map[25][5])
@@ -136,6 +128,18 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
     # print(occupancy_map[25][28])
     # print(occupancy_map[25][39])
     # print("---------------------")
+    return occupancy_map
+
+# Update the map based on lidar readings
+def update_map(pose, lidar, grid_map, obstacle_map, init_map,):
+    '''
+    Update obstacle and grid map based on LIDAR data.
+    '''
+    rx, ry, rtheta = pose
+    map_x, map_y = world_to_map(rx, ry)
+
+    # === LIDAR Setup ===
+    lidar_noise = 10 if init_map else 80
 
     ranges = lidar.getRangeImage()
     fov = lidar.getFov()
@@ -181,7 +185,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
                 if obstacle_map[x][y] < OBSTACLE_THRESHOLD:
                     grid_map[x][y] = FREE
 
-    return grid_map, obstacle_map, occupancy_map
+    return grid_map, obstacle_map
 
 
 

@@ -30,12 +30,11 @@ rabbitmq_queue = 'task_queue'
 
 # Robot initialization settings
 ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
-ROBOT_START_POSES = {"Robot 1": [-2.2, 1.4, 0.0], "Robot 2": [-2.2, 1.7, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
-ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": False, "Robot 3": False}
+ROBOT_START_POSES = {"Robot 1": [-2.2, 1.2, 0.0], "Robot 2": [-2.2, 1.6, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
+ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": True, "Robot 3": True}
 status_dict = {}
 map_dict = {}
-ROBOT_CORRIDOR_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
-robot_index = 0
+robot_corridor_ids = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
 
 lock = threading.Lock()
 
@@ -48,7 +47,7 @@ def initialize_robot(name):
     with lock:
         if name in ROBOT_IDS and name in ROBOT_START_POSES:
             return jsonify({
-                "robot_id": ROBOT_IDS[name],
+                "robot_ids": ROBOT_IDS,
                 "start_pose": ROBOT_START_POSES[name],
                 "active": ROBOT_ACTIVE[name]
             }), 200
@@ -65,9 +64,6 @@ def handle_status_update(data):
     with lock:
         robot_id = data.get('robot_id')
         status_dict[robot_id] = data
-        corridor_id = data.get('position').get('corridor_id')
-        ROBOT_CORRIDOR_IDS[robot_id] = corridor_id
-        emit('corridorstatus', ROBOT_CORRIDOR_IDS)
 
 # SocketIO event handlers for receiving map updates from robots
 @socketio.on('map_update')
@@ -109,6 +105,16 @@ def handle_map_data(data):
     for sid, socket in socketio.server.manager.rooms['/'].items():
         if sid != sender_sid:
             socketio.emit("map_data", data, room=sid)
+
+# SocketIO event handler for receiving corridor updates from robots
+@socketio.on('corridor_update')
+def handle_corridor_update(data):
+    sender_sid = request.sid
+
+    # Broadcast the corridor update to all connected clients except the sender
+    for sid, socket in socketio.server.manager.rooms['/'].items():
+        if sid != sender_sid:
+            socketio.emit("corridor_update", data, room=sid)
 
 
 # ──────────────────────────────────────────────────────────────

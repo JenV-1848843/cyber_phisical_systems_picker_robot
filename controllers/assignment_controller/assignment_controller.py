@@ -16,14 +16,14 @@ import queue
 from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, OBSTACLE, backup_map
 
 # Custom modules
-from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
+from SLAM.mapping import inflate_obstacles, update_map, update_occupancy_map, world_to_map, map_to_world, get_corridor_id
 from SLAM.navigation import drive_to_target, astar
 from SLAM.odometry import update_odometry
 from task_queue.taskqueuecontroller import on_task_received, start_async_task_queue_listener, print_task_on_task_received
 from frontiers import find_frontier
 from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
-from communication.sockets import connect_to_server, send_status_update, send_map_update, send_map_data, register_map_update_callback
+from communication.sockets import connect_to_server, corridor_update_callback, send_corridor_update, send_status_update, send_map_update, send_map_data, register_map_update_callback
 
 # ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
@@ -47,10 +47,10 @@ lidar.enablePointCloud()
 gyro = robot.getDevice("gyro")
 gyro.enable(TIME_STEP)
 
-
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, ROBOT_ID, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_IDS, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+ROBOT_ID = ROBOT_IDS[ROBOT_NAME]  # Get the robot ID from the dictionary
 
 # Check if the robot was initialized successfully
 if not initialized:
@@ -62,11 +62,13 @@ grid_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 obstacle_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int16)
 occupancy_map = np.zeros((MAP_SIZE_X, MAP_SIZE_Y), dtype=np.int8)
 
+robot_corridor_ids = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
+
 # ──────────────────────────────────────────────────────────────
 # SOCKETIO FOR ROBOT UPDATES
 # ──────────────────────────────────────────────────────────────
 
-# Threading event to signal when the map is received from another robot
+# Flag to signal when the map is received from another robot
 map_received = False
 
 # Function to handle map updates from other robots
@@ -80,20 +82,31 @@ def handle_map_update(received_grid, received_obstacle, robot_id):
 
     map_received = True  # Set the flag to signal that the map has been received
 
+# Flag to signal when the corridor update is received
+corridor_update_received = False
+
+def handle_corridor_update(data):
+    global robot_corridor_ids, corridor_update_received
+    print(f"[Controller] New corridor status received: {data}.")
+    robot_corridor_ids = data
+
+    corridor_update_received = True  # Set the flag to signal that the corridor update has been received
+
 connect_to_server()
 register_map_update_callback(handle_map_update)
+corridor_update_callback(handle_corridor_update)
 
 # ──────────────────────────────────────────────────────────────
 # FUNCTIONS FOR CONCURRENCY
 # ──────────────────────────────────────────────────────────────
 
+
+def task_callback_wrapper(ch, method, properties, body):
+    global task_queue, ready_to_accept_task, ready_to_accept_task_lock
+    on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock)
+
 # Function to send status updates and map images in the background
 # Runs in a separate thread
-
-# def task_callback_wrapper(ch, method, properties, body):
-#     global task_queue, ready_to_accept_task, ready_to_accept_task_lock
-#     on_task_received(ch, method, properties, body, task_queue, ready_to_accept_task, ready_to_accept_task_lock)
-
 def background_logger(interval):
     global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map, task_queue
 
@@ -142,7 +155,7 @@ init_map = True          # Flag to indicate if the map is being initialized
 exploring = True         # Flag to indicate if the robot is exploring  
 frontiers = []           # List of frontiers to explore
 
-current_target = None    # Target to drive to in WORLD coordinates
+current_target = None  # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
 path = []                # Planned path (list of MAP coordinates)
 
@@ -157,22 +170,25 @@ ready_to_accept_task_lock = threading.Lock()
 
 MANUAL_POSITION = None  # Set to None for automatic exploration
 # DEFAULT_POSITION = (5, 20)
+path_to_manual_position = False
 PICK_INTERVAL = 300
 pick_counter = 0
 
 FRONTIERS_INTERVAL = 5  # Interval for finding frontiers
 frontiers_counter = FRONTIERS_INTERVAL
 
+in_corridor = False
+
 # === NO EXPLORATION (comment or uncomment these two lines) ===
-# grid_map = backup_map.copy()
-# exploring = False
+grid_map = backup_map.copy()
+exploring = False
 
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
 logger_thread.start()
 
 # ____ Connect to task queue _____
-# start_async_task_queue_listener(task_callback_wrapper)
+start_async_task_queue_listener(task_callback_wrapper)
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
@@ -183,14 +199,20 @@ while robot.step(TIME_STEP) != -1:
             active = True
         else:
             continue
+    
+    # Check if a corridor update is received
+    if corridor_update_received:
+        occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
+        corridor_update_received = False
 
     if MANUAL_POSITION is None and ready_to_accept_task == False:
         with ready_to_accept_task_lock:
             ready_to_accept_task = True
 
     if MANUAL_POSITION is None and task_queue.qsize() > 0:
-        print(task_queue.get())
-        MANUAL_POSITION = task_queue.get()
+        task = task_queue.get()
+        print(f"Task received: {task}")
+        MANUAL_POSITION = (task[0], task[1])
 
     print(f"manual pos : {MANUAL_POSITION}")
     print(f"Task queue: {task_queue.qsize()}")
@@ -200,25 +222,43 @@ while robot.step(TIME_STEP) != -1:
     pose, prev_left, prev_right = update_odometry(
         pose, prev_left, prev_right, left_sensor, right_sensor, gyro, alpha=0.0)
 
-    # 2. Update the map with lidar data
-    grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
-
-    
-    if init_map:
-        init_map = False
-    # 3. Determine current robot position
+    # 2. Get robot position in map coordinates
     robot_position = world_to_map(pose[0], pose[1])
 
-    # 4. Inflate obstacles
+    # 3. Check if the robot is in a corridor
+    corridor_id = get_corridor_id(pose)
+    if corridor_id: # If true the robot is in a corridor
+        if not in_corridor: # If the robot just entered a corridor
+            robot_corridor_ids[ROBOT_NAME] = corridor_id
+            send_corridor_update(robot_corridor_ids)
+            occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
+            in_corridor = True
+    
+    elif in_corridor: # If the robot just left a corridor
+        robot_corridor_ids[ROBOT_NAME] = None
+        send_corridor_update(robot_corridor_ids)
+        occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
+        in_corridor = False
+
+    # 4. Update the map with lidar data
+    grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, init_map)
+
+    if init_map:
+        init_map = False
+
+    # 5. Inflate obstacles
     grid_map = inflate_obstacles(grid_map, frontiers)
 
     # === HANDLE MANUAL POSITION FIRST ===
-    if MANUAL_POSITION is not None and not path:
-        trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
-        if trial:
-            path = trial
-            end_target = path[-1]
-            current_target = map_to_world(path[0][0], path[0][1])
+    if MANUAL_POSITION is not None:
+        if not path_to_manual_position:
+            print(f"Planning path to manual position: {MANUAL_POSITION}")
+            trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
+            if trial:
+                path = trial
+                end_target = path[-1]
+                current_target = map_to_world(path[0][0], path[0][1])
+                path_to_manual_position = True
 
     # === EXPLORATION ===
     elif exploring:
@@ -228,7 +268,7 @@ while robot.step(TIME_STEP) != -1:
             frontiers = find_frontier(grid_map)
             frontiers_counter = 0
 
-        if not frontiers or robot.getTime() > 60:
+        if not frontiers or robot.getTime() > 900:
             print("Stopping exploration — no frontiers found.")
             exploring = False
             current_target = None
@@ -280,6 +320,8 @@ while robot.step(TIME_STEP) != -1:
                 break
 
         if rerouting:
+            if MANUAL_POSITION is not None:
+                path_to_manual_position = False
             continue
 
         if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.10:
@@ -304,6 +346,7 @@ while robot.step(TIME_STEP) != -1:
                     end_target = path[-1]
                     current_target = map_to_world(path[0][0], path[0][1])
                 MANUAL_POSITION = None
+                path_to_manual_position = False
                 pick_counter = 0
         else:
             print("No target — stopping.")

@@ -1,5 +1,6 @@
 import socketio
 import numpy as np
+import config
 
 from config import SERVER_URL, ROBOT_CORRIDOR_IDS
 
@@ -45,6 +46,7 @@ def send_map_data(grid_map, obstacle_map, robot_id):
     except Exception as e:
         print(f"Error while sending map data: {e}")
 
+
 # Register a callback function to handle map updates from other robots
 map_update_callback = None
 def register_map_update_callback(callback):
@@ -66,11 +68,33 @@ def on_map_data(data):
     except Exception as e:
         print(f"Error while processing map data: {e}")
 
+# Send corridor updates to the server
+def send_corridor_update(robot_corridor_ids):
+    try:
+        sio.emit("corridor_update", robot_corridor_ids)
+    except Exception as e:
+        print(f"Error while sending corridor update: {e}")
 
+# Register a callback function to handle corridor updates from other robots
+corridor_update_callback = None
+def corridor_update_callback(callback):
+    global corridor_update_callback
+    corridor_update_callback = callback
 
-@sio.on("corridorstatus")
-def get_status_update(data):
-    ROBOT_CORRIDOR_IDS[1] = data.get('Robot 1')
-    ROBOT_CORRIDOR_IDS[2] = data.get('Robot 2')
-    ROBOT_CORRIDOR_IDS[3] = data.get('Robot 3')
-    # print(ROBOT_CORRIDOR_IDS)
+# Handle incoming corridor updates from other robots
+@sio.on("corridor_update")
+def on_corridor_status(data):
+    try:
+        if corridor_update_callback:
+            corridor_update_callback(data)
+        else:
+            print("No callback registered to handle corridor updates.")
+    except Exception as e:
+        print(f"Error while processing corridor status: {e}")
+
+# @sio.on("corridorstatus")
+# def get_status_update(data):
+#     config.ROBOT_CORRIDOR_IDS[1] = data.get('Robot 1')
+#     config.ROBOT_CORRIDOR_IDS[2] = data.get('Robot 2')
+#     config.ROBOT_CORRIDOR_IDS[3] = data.get('Robot 3')
+#     # print(ROBOT_CORRIDOR_IDS)
