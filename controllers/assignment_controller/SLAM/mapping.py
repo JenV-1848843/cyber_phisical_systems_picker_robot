@@ -2,7 +2,7 @@ import math
 import numpy as np
 from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -69,7 +69,7 @@ def get_corridor_cells(pose):
     return corridorCells
 
 def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, robot_id):
-    # === Update occupancy map op basis van corridor ===
+    # === Update occupancy map op basis van corridor ===+
     corridorCells = get_corridor_cells(pose)
     if corridorCells:
         for x, y in corridorCells:
@@ -86,7 +86,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
-    max_range = 1.5
+    max_range = 1.0
     range_len = len(ranges)
 
     # === Snelle indexgrenzen vermijden herhaald rekenen ===
