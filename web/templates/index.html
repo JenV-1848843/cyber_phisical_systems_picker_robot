@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <title>RabbitMQ Publisher</title>
-    <link rel="stylesheet" href="/static/styles.css">  </head>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
   <body>
     <h1>Warehouse picker robot: Management page</h1>
 
@@ -11,20 +12,39 @@
       <form method="post">
         <h2>Add task to the queue</h2>
         <label for="x_target">X coordinate</label>
-        <input type="number" id="x_target" name="x_target" min="-1000" max="1000" required />
+        <input
+          type="number"
+          id="x_target"
+          name="x_target"
+          min="-1000"
+          max="1000"
+          required
+        />
 
         <label for="y_target">Y coordinate</label>
-        <input type="number" id="y_target" name="y_target" min="-1000" max="1000" required />
+        <input
+          type="number"
+          id="y_target"
+          name="y_target"
+          min="-1000"
+          max="1000"
+          required
+        />
 
         <label for="description">Description</label>
-        <textarea id="description" name="description" rows="2" maxlength="128" required></textarea>
+        <textarea
+          id="description"
+          name="description"
+          rows="2"
+          maxlength="128"
+          required
+        ></textarea>
 
         <button type="submit">Send Message</button>
       </form>
 
-      <div class="map-container">
-        <h2>Live SLAM Map</h2>
-        <img id="slamMap" src="/static/map.png" alt="SLAM Map" />
+      <div class="update-container">
+        <h2>Robot Status</h2>
       </div>
     </div>
 
@@ -36,6 +56,50 @@
         const timestamp = new Date().getTime();
         mapImg.src = `/static/map.png?cache=` + timestamp;
       }, 500);
+
+      const eventSource = new EventSource("/stream");
+
+      eventSource.onmessage = function (event) {
+        const allRobots = JSON.parse(event.data);
+        const statusDiv = document.querySelector(".update-container");
+        statusDiv.innerHTML = "";
+
+        for (const robotId in allRobots) {
+          const robot = allRobots[robotId];
+          const status = robot.status;
+          const mapImg = robot.map_img;
+
+          const posWorld = status.position.world;
+          const posMap = status.position.map;
+          const endTarget = status.end_target;
+          const currentTarget = status.current_target;
+
+          let html = `
+          <h3>Status of robot: ${robotId}</h3>
+            <div class="robot-info-block">
+              <div class="robot-info">
+
+                <h4>Robot position:</h4>
+                <p>World: x: ${posWorld.x}, y: ${posWorld.y}, θ: ${posWorld.theta} | Map: (${posMap.x}, ${posMap.y})</p>
+
+                <h4>End target:</h4>
+                <p>World: x: ${endTarget.world.x}, y: ${endTarget.world.y} | Map: (${endTarget.map.x}, ${endTarget.map.y})</p>
+
+                <h4>Status:</h4>
+                <p>${status.status}</p>
+              </div>`;
+
+          if (mapImg) {
+            html += `
+              <div class="robot-map">
+                <img src="${mapImg}" alt="Map of ${robotId}"/>
+              </div>`;
+          }
+
+          html += "</div><hr/>";
+          statusDiv.innerHTML += html;
+        }
+      };
     </script>
   </body>
 </html>

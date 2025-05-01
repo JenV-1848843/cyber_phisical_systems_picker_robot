@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from flask_socketio import SocketIO, emit
 import threading
 import json
@@ -29,10 +29,13 @@ rabbitmq_host = 'localhost'
 rabbitmq_queue = 'task_queue'
 
 # Robot initialization settings
-ROBOT_IDS = {"Bobbie": -10, "Bubbie": -11}
-ROBOT_START_POSES = {"Bobbie": [-1.5, 0.0, 0.0], "Bubbie": [-1.5, 1.0, 0]}  # [x, y, theta]
+ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
+ROBOT_START_POSES = {"Robot 1": [-1.5, 0.0, 0.0], "Robot 2": [-1.5, 1.0, 0], "Robot 3": [-1.5, -1.0, 0]}  # [x, y, theta]
+status_dict = {}
+map_dict = {}
 ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
 robot_index = 0
+
 lock = threading.Lock()
 
 # ──────────────────────────────────────────────────────────────
@@ -58,10 +61,41 @@ def initialize_robot(name):
 def handle_status_update(data):
     with lock:
         robot_id = data.get('robot_id')
+        # print(f"Received status update from robot {robot_id}: {data}")
+        status_dict[robot_id] = data
         corridor_id = data.get('position').get('corridor_id')
         ROBOT_CORRIDOR_IDS[robot_id] = corridor_id
-        print(f"Received status update from robot {robot_id}: {data}")
         emit('corridorstatus', ROBOT_CORRIDOR_IDS)
+
+@socketio.on('map_update')
+def handle_map_update(data):
+    with lock:
+        robot_id = data.get('robot_id')
+        map_img = data.get('map_img')
+        # print(f"Received map update from robot {robot_id}: {map_img}")
+        map_dict[robot_id] = map_img
+
+@app.route('/stream')
+def stream():
+    def event_stream():
+        last_sent = {}
+        while True:
+            with lock:
+                merged_data = {}
+
+                for robot_id in status_dict:
+                    merged_data[robot_id] = {
+                        "status": status_dict.get(robot_id),
+                        "map_img": map_dict.get(robot_id)  # kan None zijn
+                    }
+
+                if merged_data != last_sent:
+                    last_sent = merged_data.copy()
+                    yield f"data: {json.dumps(merged_data)}\n\n"
+
+            time.sleep(0.5)
+
+    return Response(event_stream(), mimetype='text/event-stream')
 
 # ──────────────────────────────────────────────────────────────
 # CONNECTION TO RABBITMQ

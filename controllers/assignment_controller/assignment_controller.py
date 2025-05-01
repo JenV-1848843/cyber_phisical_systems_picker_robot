@@ -1,9 +1,4 @@
 # === SLAM Controller for Webots ===
-#
-# To use this code, make sure MAP_WIDTH, MAP_HEIGHT are the same as the (rectangular) arena dimensions
-# CELL_SIZE can be adjusted to change the resolution of the map 
-# If you want to run the simulation use turtlebot3_burger.wbt
-# In utils.py comment/uncomment 'plt.pause(0.1)' (line 55) to see the plot in real-time in webots
 
 # ──────────────────────────────────────────────────────────────
 # IMPORTS
@@ -14,10 +9,9 @@ import math
 import threading
 import time
 import concurrent.futures
-import copy
 
 # Config
-from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, OBSTACLE
+from config import MAP_SIZE_X, MAP_SIZE_Y, TIME_STEP, UNKNOWN, backup_map
 
 # Custom modules
 from SLAM.mapping import inflate_obstacles, update_map, world_to_map, map_to_world
@@ -26,13 +20,7 @@ from SLAM.odometry import update_odometry
 from frontiers import find_frontier
 from utils import plot_map, create_status_update
 from communication.rest import initiate_robot
-from communication.sockets import connect_to_server, send_status_update
-
-# ──────────────────────────────────────────────────────────────
-# CONFIG
-# ──────────────────────────────────────────────────────────────
-
-ROBOT_ID = 1
+from communication.sockets import connect_to_server, send_status_update, send_map_update
 
 # ──────────────────────────────────────────────────────────────
 # ROBOT INITIALIZATION
@@ -59,7 +47,7 @@ gyro.enable(TIME_STEP)
 
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, pose, DEFAULT_POSITION = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_ID, pose, DEFAULT_POSITION = initiate_robot(ROBOT_NAME)
 
 # Check if the robot was initialized successfully
 if not initialized:
@@ -89,7 +77,10 @@ def background_logger(interval):
             time.sleep(interval)
             status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
             send_status_update(status_update)
-            plot_map(path, frontiers, pose, grid_map, occupancy_map)
+            
+            map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
+            send_map_update(map_img, ROBOT_NAME)
+            
         except Exception as e:
             print(f"Error in background logger: {e}")
 
@@ -111,13 +102,18 @@ frontiers = []           # List of frontiers to explore
 exploring = True         # Flag to indicate if the robot is exploring  
 
 # === Target position ===
-MANUAL_POSITION = (25, 4) # Set to None for automatic exploration
+MANUAL_POSITION = None  # Set to None for automatic exploration
 # DEFAULT_POSITION = (5, 20)
 PICK_INTERVAL = 300
 pick_counter = 0
 
+# NO EXPLORATION (comment or uncomment these two lines)
+# grid_map = backup_map.copy()
+# exploring = False
+# NO EXPLORATION
+
 # Start thread for logging and visualization
-logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.1,))
+logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.5,))
 logger_thread.start()
 
 # Main loop
@@ -131,12 +127,12 @@ while robot.step(TIME_STEP) != -1:
         init_map = False
 
     grid_map, obstacle_map, occupancy_map = update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, ROBOT_ID)
-
+    
     # 3. Determine current robot position
     robot_position = world_to_map(pose[0], pose[1])
 
     # 4. Inflate obstacles
-    grid_map = inflate_obstacles(grid_map)
+    grid_map = inflate_obstacles(grid_map, frontiers)
 
     # === HANDLE MANUAL POSITION FIRST ===
     if MANUAL_POSITION is not None and not path:
@@ -145,6 +141,7 @@ while robot.step(TIME_STEP) != -1:
             path = trial
             end_target = path[-1]
             current_target = map_to_world(path[0][0], path[0][1])
+
 
     # === EXPLORATION ===
     elif exploring:
@@ -184,18 +181,19 @@ while robot.step(TIME_STEP) != -1:
     if path:
         rerouting = False
         for cell in path:
-            if grid_map[cell[0], cell[1]] == OBSTACLE:
-                print("End target is an obstacle — stopping.")
+            if grid_map[cell[0], cell[1]] < 0:
+                print("Rerouting — obstacle detected on path.")
+                grid_map[cell[0], cell[1]] = UNKNOWN
                 path = []
                 current_target = None
-                end_target = None
+                end_target = cell
                 rerouting = True
                 break
 
         if rerouting:
             continue
 
-        if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.15:
+        if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.10:
             path.pop(0)
             if path:
                 current_target = map_to_world(path[0][0], path[0][1])
@@ -227,6 +225,6 @@ while robot.step(TIME_STEP) != -1:
     # === If no path (backup): return to start ===
     else:
         end_target = DEFAULT_POSITION
-        path = astar(robot_position, end_target, grid_map, occupancy_map)
+        path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
         if path:
             current_target = map_to_world(path[0][0], path[0][1])

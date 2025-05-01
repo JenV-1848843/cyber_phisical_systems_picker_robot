@@ -44,7 +44,15 @@ def astar(start, goal, cost_map, occupancy_map, robot_id):
             nx, ny = current[0]+dx, current[1]+dy
             if not in_bounds(nx, ny): continue
             if cost_map[nx][ny] < 0: continue
-            tentative = g[current] + cost_map[nx][ny]
+
+            # Try casting to python int to avoid overflow
+            # If overflow occurs, return an empty path
+            try:
+                tentative = g[current] + int(cost_map[nx][ny]) 
+            except Exception as e:
+                print(f"[astar] Exception bij optellen: {e}")
+                return []
+            
             if tentative < g.get((nx, ny), float('inf')):
                 came_from[(nx, ny)] = current
                 g[(nx, ny)] = tentative

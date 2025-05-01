@@ -1,8 +1,8 @@
 import math
 import numpy as np
+from scipy.ndimage import grey_dilation
 
-from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE, INFLATED, OBSTACLE, ROBOT_CORRIDOR_IDS, PREV_CORRIDOR_ID
-import config
+from config import MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, MAP_SIZE_X, MAP_SIZE_Y, OBSTACLE_THRESHOLD, SAFETY_RADIUS, UNKNOWN, FREE,  OBSTACLE, INFLATED_ZONE1, INFLATED_ZONE2, ROBOT_CORRIDOR_IDS
 
 # Convert world coordinates to map coordinates
 # x = x-coordinate in world space
@@ -49,19 +49,19 @@ def get_corridor_cells(pose, id=None):
 
         if id == 1:
             for x in range(20, 50):
-                for y in range(3, 7):
+                for y in range(3, 8):
                     corridorCells.append((x, y))
         elif id == 2:
             for x in range(20, 50):
-                for y in range(13, 17):
+                for y in range(14, 19):
                     corridorCells.append((x, y))
         elif id == 3:
             for x in range(20, 50):
-                for y in range(23, 27):
+                for y in range(25, 30):
                     corridorCells.append((x, y))
         elif id == 4:
             for x in range(20, 50):
-                for y in range(33, 37):
+                for y in range(36, 41):
                     corridorCells.append((x, y))
         else:
             if id is not None:
@@ -135,11 +135,6 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
         if corridorCells:
             for (x, y) in corridorCells:
                 occupancy_map[x][y] = key
-        # else:
-        #     if corridorID != config.PREV_CORRIDOR_ID and corridorID == 0:
-        #         corridorCells = get_corridor_cells(pose, config.PREV_CORRIDOR_ID)
-        #         for (x, y) in corridorCells:
-        #             occupancy_map[x][y] = 0
 
     # 1: place obstacles or free space in the map based on lidar readings and further calculations
     lidar_noise = 10 if init_map else 80 #  Reduce lidar range to 180° after initialization
@@ -151,7 +146,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     rx, ry, rtheta = pose
     map_x, map_y = world_to_map(rx, ry)
-    max_range = 1.5  # LIDAR range cap
+    max_range = 2.0  # LIDAR range cap
 
     for i, distance in enumerate(ranges):
         if i < lidar_noise or i > len(ranges) - lidar_noise:
@@ -193,24 +188,35 @@ def update_map(pose, lidar, grid_map, obstacle_map, occupancy_map, init_map, rob
 
     return grid_map, obstacle_map, occupancy_map
 
+# Function to inflate obstacles in the map
+# A mask is used to increase speed in stead of for loops
+def inflate_obstacles(grid_map, frontiers):
+    inflated_map = np.copy(grid_map)
 
-# Inflate the obstacles in the grid map to create a safety buffer
-def inflate_obstacles(grid_map):
-    for x in range(MAP_SIZE_X):
-        for y in range(MAP_SIZE_Y):
-            if grid_map[x][y] == INFLATED:
-                grid_map[x][y] = FREE
+    # Create a mask for the obstacles
+    obstacle_mask = (grid_map == OBSTACLE).astype(np.uint8)
 
-    for x in range(MAP_SIZE_X):
-        for y in range(MAP_SIZE_Y):
-            if grid_map[x][y] != -1:
-                continue
-            
-            for dx in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):
-                for dy in range(-SAFETY_RADIUS, SAFETY_RADIUS + 1):
-                    nx, ny = x + dx, y + dy
-                    if not in_bounds(nx, ny) or grid_map[nx][ny] == -1:
-                        continue
-                        
-                    grid_map[nx][ny] = INFLATED  # Inflated cell
-    return grid_map
+    # Create a mask and safe zone for the frontiers -> otherwise frontiers will be overwritten
+    protection_mask = np.zeros_like(grid_map, dtype=bool)
+    for fx, fy in frontiers:
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                nx, ny = fx + dx, fy + dy
+                if 0 <= nx < grid_map.shape[0] and 0 <= ny < grid_map.shape[1]:
+                    protection_mask[nx, ny] = True
+
+    # INFLATED ZONE 1
+    structure1 = np.ones((3, 3), dtype=np.uint8)
+    inflated_mask1 = grey_dilation(obstacle_mask, footprint=structure1)
+
+    mask1 = (inflated_mask1 == 1) & (inflated_map == FREE) & (~protection_mask)
+    inflated_map[mask1] = INFLATED_ZONE1
+
+    # INFLATED ZONE 2
+    structure2 = np.ones((5, 5), dtype=np.uint8)
+    inflated_mask2 = grey_dilation(obstacle_mask, footprint=structure2)
+
+    mask2 = (inflated_mask2 == 1) & (inflated_map == FREE) & (~protection_mask)
+    inflated_map[mask2] = INFLATED_ZONE2
+
+    return inflated_map
