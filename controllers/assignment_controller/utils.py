@@ -145,7 +145,7 @@ def create_status_update(name, pose, path, frontiers, current_target, end_target
             "world": {"x": round(map_to_world(end_target[0], end_target[1])[0], 2),
                       "y": round(map_to_world(end_target[0], end_target[1])[1], 2)},
             "map": {"x": end_target[0], "y": end_target[1]}
-        } if end_target else None
+        } if end_target else None,
     }
 
     return status_update
