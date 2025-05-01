@@ -75,7 +75,7 @@ def background_logger(interval):
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target)
+            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target, ROBOT_ID)
             send_status_update(status_update)
             
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)

@@ -33,7 +33,7 @@ ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
 ROBOT_START_POSES = {"Robot 1": [-1.5, 0.0, 0.0], "Robot 2": [-1.5, 1.0, 0], "Robot 3": [-1.5, -1.0, 0]}  # [x, y, theta]
 status_dict = {}
 map_dict = {}
-ROBOT_CORRIDOR_IDS = {"Bobbie": None, "Bubbie": None}
+ROBOT_CORRIDOR_IDS = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
 robot_index = 0
 
 lock = threading.Lock()
