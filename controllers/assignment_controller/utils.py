@@ -109,18 +109,18 @@ def plot_map(path, frontiers, pose, grid_map, occupancy_map, robot_name):
     return base64.b64encode(buffer.read()).decode('utf-8')
 
 # Function to log status of the robot
-def create_status_update(name, pose, path, frontiers, current_target, end_target, robot_id):
+def create_status_update(robot_name, pose, end_target, exploring, task_phase):
     mx, my = world_to_map(pose[0], pose[1])
     theta_in_degrees = math.degrees(pose[2] % (2 * math.pi))
     status_msg = ""
     
     # Determine status
-    if not frontiers and not path:
+    if exploring:
+        status_msg = "exploring"
+    elif not exploring and task_phase:
+        status_msg = task_phase
+    elif not exploring and not task_phase:
         status_msg = "idle"
-    elif not path:
-        status_msg = "waiting_for_path"
-    elif path:
-        status_msg = "navigating"
     else:
         status_msg = "unknown"
 
@@ -128,20 +128,13 @@ def create_status_update(name, pose, path, frontiers, current_target, end_target
     # print(f"Robot {robot_id} registered itself in corridor {corridorID}")
 
     status_update = {
-        "robot_id": name,
+        "robot_id": robot_name,
         "position": {
             "world": {"x": round(pose[0], 2), "y": round(pose[1], 2), "theta": round(theta_in_degrees, 2)},
             "map": {"x": mx, "y": my},
             "corridor_id": corridorID
         },
-        "frontiers_count": len(frontiers),
-        "path_length": len(path) if path else 0,
         "status": status_msg,
-        "current_target": {
-            "world": {"x": round(current_target[0], 2), "y": round(current_target[1], 2)},
-            "map": {"x": world_to_map(current_target[0], current_target[1])[0],
-                    "y": world_to_map(current_target[0], current_target[1])[1]}
-        } if current_target else None,
         "end_target": {
             "world": {"x": round(map_to_world(end_target[0], end_target[1])[0], 2),
                       "y": round(map_to_world(end_target[0], end_target[1])[1], 2)},

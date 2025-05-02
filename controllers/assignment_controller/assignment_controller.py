@@ -49,7 +49,7 @@ gyro.enable(TIME_STEP)
 
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, ROBOT_IDS, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_IDS, pose, DEFAULT_POSITION, DROP_OFF, active = initiate_robot(ROBOT_NAME)
 ROBOT_ID = ROBOT_IDS[ROBOT_NAME]  # Get the robot ID from the dictionary
 
 # Check if the robot was initialized successfully
@@ -108,13 +108,13 @@ def task_callback_wrapper(ch, method, properties, body):
 # Function to send status updates and map images in the background
 # Runs in a separate thread
 def background_logger(interval):
-    global ROBOT_NAME, pose, path, frontiers, current_target, end_target, grid_map, obstacle_map, task_queue
+    global ROBOT_NAME, pose, end_target, exploring, task_phase, grid_map, obstacle_map
 
     while True:
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            status_update = create_status_update(ROBOT_NAME, pose, path, frontiers, current_target, end_target, ROBOT_ID)
+            status_update = create_status_update(ROBOT_NAME, pose, end_target, exploring, task_phase)
             send_status_update(status_update)
 
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
@@ -145,6 +145,18 @@ def find_paths_to_frontiers(batch_args):
             results.append((path, frontier))
     return results
 
+# ──────────────────────────────────────────────────────────────
+# Functions for main loop
+# ──────────────────────────────────────────────────────────────
+
+def check_obstacle_on_path(path, grid_map):
+    for cell in path:
+        if grid_map[cell[0], cell[1]] == OBSTACLE:
+            return True
+    return False
+
+def has_reacher_target(pose, target, threshold=0.10):
+    return math.hypot(pose[0] - target[0], pose[1] - target[1]) < threshold
 
 # ──────────────────────────────────────────────────────────────
 # MAIN LOOP
@@ -154,7 +166,6 @@ def find_paths_to_frontiers(batch_args):
 init_map = True          # Flag to indicate if the map is being initialized 
 exploring = True         # Flag to indicate if the robot is exploring  
 frontiers = []           # List of frontiers to explore
-
 current_target = None  # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
 path = []                # Planned path (list of MAP coordinates)
@@ -168,9 +179,9 @@ task_queue = queue.Queue()
 ready_to_accept_task = False
 ready_to_accept_task_lock = threading.Lock()
 
-MANUAL_POSITION = None  # Set to None for automatic exploration
-# DEFAULT_POSITION = (5, 20)
-path_to_manual_position = False
+task_location = None  # Set to None for automatic exploration
+handling_task = False
+task_phase = None # None, "driving to task", "picking up", "driving to drop off", "dropping off"
 PICK_INTERVAL = 300
 pick_counter = 0
 
@@ -205,18 +216,19 @@ while robot.step(TIME_STEP) != -1:
         occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
         corridor_update_received = False
 
-    if MANUAL_POSITION is None and ready_to_accept_task == False:
+    # Robot can not accept tasks while exploring or when handling a task
+    if not exploring and not handling_task and not ready_to_accept_task:
         with ready_to_accept_task_lock:
             ready_to_accept_task = True
 
-    if MANUAL_POSITION is None and task_queue.qsize() > 0:
+    if ready_to_accept_task and task_queue.qsize() > 0:
         task = task_queue.get()
         print(f"Task received: {task}")
-        MANUAL_POSITION = (task[0], task[1])
-
-    print(f"manual pos : {MANUAL_POSITION}")
-    print(f"Task queue: {task_queue.qsize()}")
-
+        task_location = (task[0], task[1])
+        handling_task = True
+        ready_to_accept_task = False
+        task_phase = "driving to task"
+        path = []
 
     # 1. Update the robot's pose using odometry and gyroscope
     pose, prev_left, prev_right = update_odometry(
@@ -244,24 +256,13 @@ while robot.step(TIME_STEP) != -1:
     grid_map, obstacle_map = update_map(pose, lidar, grid_map, obstacle_map, init_map)
 
     if init_map:
-        init_map = False
+        init_map = False  # Set to False after the first update
 
     # 5. Inflate obstacles
     grid_map = inflate_obstacles(grid_map, frontiers)
 
-    # === HANDLE MANUAL POSITION FIRST ===
-    if MANUAL_POSITION is not None:
-        if not path_to_manual_position:
-            print(f"Planning path to manual position: {MANUAL_POSITION}")
-            trial = astar(robot_position, MANUAL_POSITION, grid_map, occupancy_map, ROBOT_ID)
-            if trial:
-                path = trial
-                end_target = path[-1]
-                current_target = map_to_world(path[0][0], path[0][1])
-                path_to_manual_position = True
-
     # === EXPLORATION ===
-    elif exploring:
+    if exploring:
         frontiers_counter += 1
         
         if frontiers_counter > FRONTIERS_INTERVAL:
@@ -306,55 +307,115 @@ while robot.step(TIME_STEP) != -1:
 
                 send_map_data(grid_map, obstacle_map, ROBOT_ID)
 
+    if handling_task:
+        if task_phase == "driving to task":
+            if not path:
+                trial = astar(robot_position, task_location, grid_map, occupancy_map, ROBOT_ID)
+                if trial:
+                    path = trial
+                    end_target = task_location
+                    current_target = map_to_world(path[0][0], path[0][1])
+                    continue
+                else:
+                    print("No valid path to task location.")    
+                    print("Deleting task.")
+                    handling_task = False
+                    task_phase = None
+                    task_location = None
+                    path = []
+                    continue
+            
+            if check_obstacle_on_path(path, grid_map):
+                path = []    
+                continue
 
-    # === FOLLOW PATH ===
-    if path:
-        rerouting = False
-        for cell in path:
-            if grid_map[cell[0], cell[1]] == OBSTACLE:
-                print("Rerouting — obstacle detected on path.")
-                path = []
-                end_target = None
-                current_target = None
-                rerouting = True
-                break
+            if has_reacher_target(pose, current_target):
+                path.pop(0)
+                if path:
+                    current_target = map_to_world(path[0][0], path[0][1])
+                else:
+                    current_target = None
+                    task_phase = "picking up"
+                    left_motor.setVelocity(0.0)
+                    right_motor.setVelocity(0.0)
+                    print("Task reached.")
+                    continue
 
-        if rerouting:
-            if MANUAL_POSITION is not None:
-                path_to_manual_position = False
+            drive_to_target(current_target, pose, left_motor, right_motor)
             continue
 
-        if math.hypot(pose[0] - current_target[0], pose[1] - current_target[1]) < 0.10:
-            path.pop(0)
-            if path:
-                current_target = map_to_world(path[0][0], path[0][1])
-            else:
-                current_target = None
-
-        if current_target:
-            drive_to_target(current_target, pose, left_motor, right_motor)
-        elif not current_target and MANUAL_POSITION is not None:
-            # After reaching MANUAL_POSITION, pause, then go to DEFAULT_POSITION
+        if task_phase == "picking up":
             if pick_counter <= PICK_INTERVAL:
                 left_motor.setVelocity(0.0)
                 right_motor.setVelocity(0.0)
                 pick_counter += 1
+                continue
             else:
-                trial = astar(robot_position, DEFAULT_POSITION, grid_map, occupancy_map, ROBOT_ID)
+                print("Task picked up.")
+                pick_counter = 0
+                task_phase = "driving to drop off"
+                path = []
+
+        if task_phase == "driving to drop off":
+            if not path:
+                trial = astar(robot_position, DROP_OFF, grid_map, occupancy_map, ROBOT_ID)
                 if trial:
                     path = trial
-                    end_target = path[-1]
+                    end_target = task_location
                     current_target = map_to_world(path[0][0], path[0][1])
-                MANUAL_POSITION = None
-                path_to_manual_position = False
-                pick_counter = 0
-        else:
-            print("No target — stopping.")
-            path = []
-            left_motor.setVelocity(0.0)
-            right_motor.setVelocity(0.0)
+                    continue
+                else:
+                    print("No valid path to drop off location.")
+                    print("Try again")
+                    continue
+            
+            if check_obstacle_on_path(path, grid_map):
+                path = []    
+                continue
 
-    # === If no path (backup): return to start ===
+            if has_reacher_target(pose, current_target):
+                path.pop(0)
+                if path:
+                    current_target = map_to_world(path[0][0], path[0][1])
+                else:
+                    current_target = None
+                    task_phase = "dropping off"
+                    left_motor.setVelocity(0.0)
+                    right_motor.setVelocity(0.0)
+                    print("Task drop off reached.")
+                    continue
+
+            drive_to_target(current_target, pose, left_motor, right_motor)
+            continue
+
+        if task_phase == "dropping off":
+            if pick_counter <= PICK_INTERVAL:
+                left_motor.setVelocity(0.0)
+                right_motor.setVelocity(0.0)
+                pick_counter += 1
+                continue
+            else:
+                print("Task dropped off.")
+                pick_counter = 0
+                task_phase = None
+                handling_task = False
+                path = []
+
+    # === FOLLOW PATH ===
+    if path:
+        if check_obstacle_on_path(path, grid_map):
+            path = []    
+            continue
+
+        if has_reacher_target(pose, current_target):
+            path.pop(0)
+            if path:
+                current_target = map_to_world(path[0][0], path[0][1])
+            else:
+                continue
+        
+        drive_to_target(current_target, pose, left_motor, right_motor)
+
     else:
         end_target = DEFAULT_POSITION
         path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
