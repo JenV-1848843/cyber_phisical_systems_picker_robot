@@ -13,7 +13,7 @@ def initiate_robot(robot_name):
         robot_ids = response.json()["robot_ids"] 
         pose = response.json()["start_pose"]
         home_cell = world_to_map(pose[0], pose[1])
-        drop_off = response.json()["drop_off"]
+        drop_off = tuple(response.json()["drop_off"])
         active = response.json()["active"]
         print(f"Robot initialized: {robot_name} with pose {pose} and drop off {drop_off} and is active = {active}")
         return initialized, robot_ids, pose, home_cell, drop_off, active
