@@ -74,8 +74,14 @@
               <div class="robot-info">
 
                 <h4>Robot position:</h4>
-                <p>World: x: ${posWorld.x}, y: ${posWorld.y}, θ: ${posWorld.theta} | Map: (${posMap.x}, ${posMap.y})</p>
+                <p>World: x: ${posWorld.x}, y: ${posWorld.y}, θ: ${posWorld.theta} | Map: (${posMap.x}, ${posMap.y})</p>`;
 
+          if (endTarget) {
+            html += `
+                <h4>Target:</h4>
+                <p>World: x: ${endTarget.world.x}, y: ${endTarget.world.y} | Map: (${endTarget.map.x}, ${endTarget.map.y})</p>`;
+          }
+          html += `
                 <h4>Status:</h4>
                 <p>${status.status}</p>
               </div>`;
