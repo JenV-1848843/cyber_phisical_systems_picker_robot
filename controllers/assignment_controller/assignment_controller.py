@@ -192,8 +192,8 @@ in_corridor = False
 blocking_robot_id = None
 
 # === NO EXPLORATION (comment or uncomment these two lines) ===
-grid_map = backup_map.copy()
-exploring = False
+# grid_map = backup_map.copy()
+# exploring = False
 
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
@@ -212,20 +212,23 @@ while robot.step(TIME_STEP) != -1:
         if end_target:
             path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
 
-        if occupancy_map[end_target[0]][end_target[1]] != 0 or occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
-            blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
-            active = False
+            if occupancy_map[end_target[0]][end_target[1]] != 0 or occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
+                blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
+                active = False
     
     # If the robot is not active, wait for a map to be received
     if not active:
-        if occupancy_map[end_target[0]][end_target[1]] == 0:
-            active = True
-        elif map_received:
+        if map_received:
             exploring = False
             active = True
+        if end_target and blocking_robot_id and occupancy_map[end_target[0]][end_target[1]] == 0:
+            active = True
+            blocking_robot_id = None
+            print("active again")
 
         left_motor.setVelocity(0.0)
         right_motor.setVelocity(0.0)
+        continue
 
     if end_target and occupancy_map[end_target[0]][end_target[1]] != 0 and occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
         blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
