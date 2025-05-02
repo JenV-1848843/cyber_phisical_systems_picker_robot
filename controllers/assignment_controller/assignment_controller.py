@@ -140,9 +140,9 @@ def find_paths_to_frontiers(batch_args):
 
     results = []
     for frontier in frontier_list:
-        path = astar(robot_pos, frontier, grid_map_local, occupancy_map, ROBOT_ID)
+        path, cost = astar(robot_pos, frontier, grid_map_local, occupancy_map, ROBOT_ID)
         if path:
-            results.append((path, frontier))
+            results.append((path, frontier, cost))
     return results
 
 # ──────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ def check_obstacle_on_path(path, grid_map):
             return True
     return False
 
-def has_reacher_target(pose, target, threshold=0.10):
+def has_reacher_target(pose, target, threshold=0.15):
     return math.hypot(pose[0] - target[0], pose[1] - target[1]) < threshold
 
 # ──────────────────────────────────────────────────────────────
@@ -168,7 +168,8 @@ exploring = True         # Flag to indicate if the robot is exploring
 frontiers = []           # List of frontiers to explore
 current_target = None  # Target to drive to in WORLD coordinates
 end_target = None        # Final goal in MAP coordinates
-path = []                # Planned path (list of MAP coordinates)
+path = []          
+path_cost = None      # Planned path (list of MAP coordinates)
 
 prev_left = 0.0          # Previous left wheel sensor value -> for odometry
 prev_right = 0.0         # Previous right wheel sensor value -> for odometry
@@ -210,11 +211,10 @@ while robot.step(TIME_STEP) != -1:
         corridor_update_received = False
 
         if end_target:
-            path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
+            path, path_cost = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
 
-            if occupancy_map[end_target[0]][end_target[1]] != 0 or occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
-                blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
-                active = False
+    if path_cost and path_cost > 99:
+        path, path_cost = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
     
     # If the robot is not active, wait for a map to be received
     if not active:
@@ -230,7 +230,7 @@ while robot.step(TIME_STEP) != -1:
         right_motor.setVelocity(0.0)
         continue
 
-    if end_target and occupancy_map[end_target[0]][end_target[1]] != 0 and occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
+    if end_target and occupancy_map[end_target[0]][end_target[1]] not in (0, ROBOT_ID):
         blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
         active = False
         left_motor.setVelocity(0.0)
@@ -249,6 +249,7 @@ while robot.step(TIME_STEP) != -1:
         handling_task = True
         ready_to_accept_task = False
         task_phase = "driving to task"
+        active = True
         path = []
 
     # 1. Update the robot's pose using odometry and gyroscope
@@ -311,12 +312,13 @@ while robot.step(TIME_STEP) != -1:
                 for group in batch_results:
                     results.extend(group)  
 
-            valid_paths = [(trial, frontier) for trial, frontier in results if trial]
+            valid_paths = [(trial, frontier, cost) for trial, frontier, cost in results if trial]
 
             if valid_paths:
-                best_path, best_frontier = min(valid_paths, key=lambda x: len(x[0]))
+                best_path, best_frontier, cost = min(valid_paths, key=lambda x: len(x[0]))
                 path = best_path
                 end_target = path[-1]
+                path_cost = cost
                 current_target = map_to_world(path[0][0], path[0][1])
             else:
                 print("Stopping exploration — no valid paths found.")
@@ -325,15 +327,17 @@ while robot.step(TIME_STEP) != -1:
                 end_target = None
                 path = []
                 frontiers = []
+                path_cost = None
 
                 send_map_data(grid_map, obstacle_map, ROBOT_ID)
 
     if handling_task:
         if task_phase == "driving to task":
             if not path:
-                trial = astar(robot_position, task_location, grid_map, occupancy_map, ROBOT_ID)
+                trial, cost = astar(robot_position, task_location, grid_map, occupancy_map, ROBOT_ID)
                 if trial:
                     path = trial
+                    path_cost = cost
                     end_target = task_location
                     current_target = map_to_world(path[0][0], path[0][1])
                     continue
@@ -377,9 +381,10 @@ while robot.step(TIME_STEP) != -1:
 
         if task_phase == "driving to drop off":
             if not path:
-                trial = astar(robot_position, DROP_OFF, grid_map, occupancy_map, ROBOT_ID)
+                trial, cost = astar(robot_position, DROP_OFF, grid_map, occupancy_map, ROBOT_ID)
                 if trial:
                     path = trial
+                    path_cost = cost
                     end_target = DROP_OFF
                     current_target = map_to_world(path[0][0], path[0][1])
                     continue
@@ -436,8 +441,11 @@ while robot.step(TIME_STEP) != -1:
         drive_to_target(current_target, pose, left_motor, right_motor)
 
     else:
+        if robot_position == DEFAULT_POSITION:
+            active = False
+
         end_target = DEFAULT_POSITION
-        path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
+        path, path_cost = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
         if path:
             current_target = map_to_world(path[0][0], path[0][1])
 
