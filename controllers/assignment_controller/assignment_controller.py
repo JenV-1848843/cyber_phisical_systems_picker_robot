@@ -49,7 +49,7 @@ gyro.enable(TIME_STEP)
 
 # Initialize the robot using the REST API
 ROBOT_NAME = robot.getName()
-initialized, ROBOT_IDS, pose, DEFAULT_POSITION, active = initiate_robot(ROBOT_NAME)
+initialized, ROBOT_IDS, pose, DEFAULT_POSITION, DROP_OFF, active = initiate_robot(ROBOT_NAME)
 ROBOT_ID = ROBOT_IDS[ROBOT_NAME]  # Get the robot ID from the dictionary
 
 # Check if the robot was initialized successfully
@@ -169,7 +169,6 @@ ready_to_accept_task = False
 ready_to_accept_task_lock = threading.Lock()
 
 MANUAL_POSITION = None  # Set to None for automatic exploration
-# DEFAULT_POSITION = (5, 20)
 path_to_manual_position = False
 PICK_INTERVAL = 300
 pick_counter = 0

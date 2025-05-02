@@ -32,6 +32,7 @@ rabbitmq_queue = 'task_queue'
 ROBOT_IDS = {"Robot 1": 1, "Robot 2": 2, "Robot 3": 3}
 ROBOT_START_POSES = {"Robot 1": [-2.2, 1.2, 0.0], "Robot 2": [-2.2, 1.6, 0], "Robot 3": [-2.2, 2.0, 0]}  # [x, y, theta]
 ROBOT_ACTIVE = {"Robot 1": True, "Robot 2": True, "Robot 3": True}
+ROBOT_DROP_OFFS = {"Robot 1": (7, 5), "Robot 2": (7, 9), "Robot 3": (7, 13)}
 status_dict = {}
 map_dict = {}
 robot_corridor_ids = {"Robot 1": None, "Robot 2": None, "Robot 3": None}
@@ -49,6 +50,7 @@ def initialize_robot(name):
             return jsonify({
                 "robot_ids": ROBOT_IDS,
                 "start_pose": ROBOT_START_POSES[name],
+                "drop_off": ROBOT_DROP_OFFS[name],  
                 "active": ROBOT_ACTIVE[name]
             }), 200
         else:
