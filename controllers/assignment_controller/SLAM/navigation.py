@@ -39,7 +39,7 @@ def astar(start, goal, cost_map, occupancy_map, robot_id):
 
                     break
 
-            return path
+            return path, g.get(goal, float('inf'))
         for dx, dy in dirs:
             nx, ny = current[0]+dx, current[1]+dy
             if not in_bounds(nx, ny): continue
@@ -51,10 +51,10 @@ def astar(start, goal, cost_map, occupancy_map, robot_id):
                 tentative = g[current] + int(cost_map[nx][ny]) 
             except Exception as e:
                 print(f"[astar] Exception bij optellen: {e}")
-                return []
+                return [], float('inf')
             
             if tentative > 1000:
-                return []
+                return [], float('inf')
             
             if tentative < g.get((nx, ny), float('inf')):
                 came_from[(nx, ny)] = current
@@ -63,7 +63,7 @@ def astar(start, goal, cost_map, occupancy_map, robot_id):
                 if (nx, ny) not in open_set_hash:
                     heapq.heappush(open_set, (f[(nx, ny)], (nx, ny)))
                     open_set_hash.add((nx, ny))
-    return []
+    return [], float('inf')
 
 def drive_to_target(target, pose, left_motor, right_motor):
     dx, dy = target[0] - pose[0], target[1] - pose[1]
