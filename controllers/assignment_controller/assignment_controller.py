@@ -108,13 +108,13 @@ def task_callback_wrapper(ch, method, properties, body):
 # Function to send status updates and map images in the background
 # Runs in a separate thread
 def background_logger(interval):
-    global ROBOT_NAME, pose, path, end_target, grid_map, obstacle_map, task_queue
+    global ROBOT_NAME, pose, end_target, exploring, task_phase, grid_map, obstacle_map
 
     while True:
         try:
             # Sleep for the specified interval
             time.sleep(interval)
-            status_update = create_status_update(ROBOT_NAME, pose, end_target, exploring, task_phase, ROBOT_ID)
+            status_update = create_status_update(ROBOT_NAME, pose, end_target, exploring, task_phase)
             send_status_update(status_update)
 
             map_img = plot_map(path, frontiers, pose, grid_map, occupancy_map, ROBOT_NAME)
@@ -191,8 +191,8 @@ frontiers_counter = FRONTIERS_INTERVAL
 in_corridor = False
 
 # === NO EXPLORATION (comment or uncomment these two lines) ===
-# grid_map = backup_map.copy()
-# exploring = False
+grid_map = backup_map.copy()
+exploring = False
 
 # Start thread for logging and visualization
 logger_thread = threading.Thread(target=background_logger, daemon=True, args=(0.2,))
@@ -398,6 +398,7 @@ while robot.step(TIME_STEP) != -1:
                 print("Task dropped off.")
                 pick_counter = 0
                 task_phase = None
+                handling_task = False
                 path = []
 
     # === FOLLOW PATH ===

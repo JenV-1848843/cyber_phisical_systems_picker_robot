@@ -51,12 +51,6 @@
     <p>{{ message }}</p>
 
     <script>
-      setInterval(() => {
-        const mapImg = document.getElementById("slamMap");
-        const timestamp = new Date().getTime();
-        mapImg.src = `/static/map.png?cache=` + timestamp;
-      }, 500);
-
       const eventSource = new EventSource("/stream");
 
       eventSource.onmessage = function (event) {
@@ -67,12 +61,12 @@
         for (const robotId in allRobots) {
           const robot = allRobots[robotId];
           const status = robot.status;
+          console.log(status);
           const mapImg = robot.map_img;
 
           const posWorld = status.position.world;
           const posMap = status.position.map;
           const endTarget = status.end_target;
-          const currentTarget = status.current_target;
 
           let html = `
           <h3>Status of robot: ${robotId}</h3>
@@ -81,9 +75,6 @@
 
                 <h4>Robot position:</h4>
                 <p>World: x: ${posWorld.x}, y: ${posWorld.y}, θ: ${posWorld.theta} | Map: (${posMap.x}, ${posMap.y})</p>
-
-                <h4>End target:</h4>
-                <p>World: x: ${endTarget.world.x}, y: ${endTarget.world.y} | Map: (${endTarget.map.x}, ${endTarget.map.y})</p>
 
                 <h4>Status:</h4>
                 <p>${status.status}</p>
