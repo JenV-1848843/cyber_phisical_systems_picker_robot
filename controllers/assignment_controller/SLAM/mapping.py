@@ -145,7 +145,7 @@ def update_map(pose, lidar, grid_map, obstacle_map, init_map,):
     fov = lidar.getFov()
     res = lidar.getHorizontalResolution()
     angle_step = fov / res
-    max_range = 1.0
+    max_range = 2.5
     range_len = len(ranges)
 
     # === Gebruik lokale variabelen voor herhaalde toegang
