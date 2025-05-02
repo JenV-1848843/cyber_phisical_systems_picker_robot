@@ -189,6 +189,7 @@ FRONTIERS_INTERVAL = 5  # Interval for finding frontiers
 frontiers_counter = FRONTIERS_INTERVAL
 
 in_corridor = False
+blocking_robot_id = None
 
 # === NO EXPLORATION (comment or uncomment these two lines) ===
 grid_map = backup_map.copy()
@@ -203,18 +204,35 @@ start_async_task_queue_listener(task_callback_wrapper)
 
 # Main loop
 while robot.step(TIME_STEP) != -1:
-    # If the robot is not active, wait for a map to be received
-    if not active:
-        if map_received:
-            exploring = False
-            active = True
-        else:
-            continue
-    
     # Check if a corridor update is received
     if corridor_update_received:
         occupancy_map = update_occupancy_map(pose, occupancy_map, robot_corridor_ids, ROBOT_IDS)
         corridor_update_received = False
+
+        if end_target:
+            path = astar(robot_position, end_target, grid_map, occupancy_map, ROBOT_ID)
+
+        if occupancy_map[end_target[0]][end_target[1]] != 0 or occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
+            blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
+            active = False
+    
+    # If the robot is not active, wait for a map to be received
+    if not active:
+        if occupancy_map[end_target[0]][end_target[1]] == 0:
+            active = True
+        elif map_received:
+            exploring = False
+            active = True
+
+        left_motor.setVelocity(0.0)
+        right_motor.setVelocity(0.0)
+
+    if end_target and occupancy_map[end_target[0]][end_target[1]] != 0 and occupancy_map[end_target[0]][end_target[1]] != ROBOT_ID:
+        blocking_robot_id = occupancy_map[end_target[0]][end_target[1]]
+        active = False
+        left_motor.setVelocity(0.0)
+        right_motor.setVelocity(0.0)
+        continue
 
     # Robot can not accept tasks while exploring or when handling a task
     if not exploring and not handling_task and not ready_to_accept_task:
@@ -318,11 +336,7 @@ while robot.step(TIME_STEP) != -1:
                     continue
                 else:
                     print("No valid path to task location.")    
-                    print("Deleting task.")
-                    handling_task = False
-                    task_phase = None
-                    task_location = None
-                    path = []
+                    print("Try again")
                     continue
             
             if check_obstacle_on_path(path, grid_map):
@@ -354,6 +368,8 @@ while robot.step(TIME_STEP) != -1:
                 print("Task picked up.")
                 pick_counter = 0
                 task_phase = "driving to drop off"
+                end_target = DROP_OFF
+                print(f"Driving to drop off location: {end_target}")
                 path = []
 
         if task_phase == "driving to drop off":
@@ -361,7 +377,7 @@ while robot.step(TIME_STEP) != -1:
                 trial = astar(robot_position, DROP_OFF, grid_map, occupancy_map, ROBOT_ID)
                 if trial:
                     path = trial
-                    end_target = task_location
+                    end_target = DROP_OFF
                     current_target = map_to_world(path[0][0], path[0][1])
                     continue
                 else:
